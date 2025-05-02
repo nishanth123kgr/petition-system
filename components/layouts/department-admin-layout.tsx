@@ -13,9 +13,10 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import { Badge } from "@/components/ui/badge"
 import { Input } from "@/components/ui/input"
-import DashboardContent from "@/components/sections/dashboard-content"
-import StaffContent from "@/components/sections/staff-content"
-import PetitionsContent from "@/components/sections/petitions-content"
+import DashboardContent from "@/components/sections/department-admin/dashboard-content"
+import StaffContent from "@/components/sections/department-admin/staff-content"
+import PetitionsContent from "@/components/sections/department-admin/petitions-content"
+import { SettingsContent } from "../sections/settings/settings-content"
 
 // Navigation items data for cleaner code
 const navItems = [
@@ -83,7 +84,7 @@ export function DepartmentAdminLayout({ children }: { children: React.ReactNode 
         return <PetitionsContent />;
       case "settings":
         // We could create a SettingsContent component in the future
-        return <div className="p-6 text-slate-200">Settings content will be displayed here.</div>;
+        return <SettingsContent />;
       default:
         return <DashboardContent />;
     }

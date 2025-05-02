@@ -12,9 +12,9 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 
-import { StaffDashboardContent } from "@/components/sections/staff-dashboard-content"
-import { StaffPetitionsContent } from "@/components/sections/staff-petitions-content"
-import { StaffSettingsContent } from "@/components/sections/staff-settings-content"
+import { StaffDashboardContent } from "@/components/sections/staff/staff-dashboard-content"
+import { StaffPetitionsContent } from "@/components/sections/staff/staff-petitions-content"
+import { SettingsContent } from "@/components/sections/settings/settings-content"
 
 // Navigation items data for cleaner code
 const navItems = [
@@ -114,7 +114,7 @@ export function StaffDashboardLayout({ children }: { children: React.ReactNode }
       case "petitions":
         return <StaffPetitionsContent petitions={petitions} onUpdateStatus={handleUpdateStatus} />;
       case "settings":
-        return <StaffSettingsContent />;
+        return <SettingsContent />;
       default:
         return <StaffDashboardContent petitions={petitions} onUpdateStatus={handleUpdateStatus} />;
     }
