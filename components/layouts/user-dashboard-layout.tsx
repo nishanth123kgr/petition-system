@@ -12,6 +12,10 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { UserDashboardContent } from "@/components/sections/user/user-dashboard-content"
+import { UserNewPetitionContent } from "@/components/sections/user/user-new-petition-content"
+import { UserMyPetitionsContent } from "@/components/sections/user/user-my-petitions-content"
+import { UserSettingsContent } from "@/components/sections/user/user-settings-content"
+import { SettingsContent } from "../sections/settings/settings-content"
 
 
 // Mock data for user petitions
@@ -100,32 +104,11 @@ export function UserDashboardLayout({ children }: { children: React.ReactNode })
       case "dashboard":
         return <UserDashboardContent petitions={petitions} />;
       case "new-petition":
-        return (
-          <div className="p-6">
-            <h2 className="text-2xl font-bold mb-4 bg-gradient-to-r from-violet-200 to-indigo-200 bg-clip-text text-transparent">Create New Petition</h2>
-            <p className="text-slate-400 mb-6">Submit a new petition to get started</p>
-            {/* The form content would go here */}
-            {children}
-          </div>
-        );
+        return <UserNewPetitionContent />;
       case "my-petitions":
-        return (
-          <div className="p-6">
-            <h2 className="text-2xl font-bold mb-4 bg-gradient-to-r from-violet-200 to-indigo-200 bg-clip-text text-transparent">My Petitions</h2>
-            <p className="text-slate-400 mb-6">View and manage your submitted petitions</p>
-            {/* The petitions list would go here */}
-            {children}
-          </div>
-        );
+        return <UserMyPetitionsContent petitions={petitions} />;
       case "settings":
-        return (
-          <div className="p-6">
-            <h2 className="text-2xl font-bold mb-4 bg-gradient-to-r from-violet-200 to-indigo-200 bg-clip-text text-transparent">Settings</h2>
-            <p className="text-slate-400 mb-6">Manage your account preferences</p>
-            {/* Settings form would go here */}
-            {children}
-          </div>
-        );
+        return <SettingsContent />;
       default:
         return <UserDashboardContent petitions={petitions} />;
     }
