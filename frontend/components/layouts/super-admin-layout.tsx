@@ -1,60 +1,81 @@
 'use client'
 
-import type React from "react"
-import Link from "next/link"
+import React, { useState, useEffect } from "react"
 import { usePathname } from "next/navigation"
+import Link from "next/link"
 import { motion } from "framer-motion"
-import { Button } from "@/components/ui/button"
-import { LayoutDashboard, FileText, Settings, LogOut, User, Menu, Bell, History, ChevronRight, Plus } from "lucide-react"
-import { useState, useEffect } from "react"
-import { cn } from "@/lib/utils"
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
-import { UserDashboardContent } from "@/components/sections/user/user-dashboard-content"
-import { UserNewPetitionContent } from "@/components/sections/user/user-new-petition-content"
-import { UserMyPetitionsContent } from "@/components/sections/user/user-my-petitions-content"
-import { UserSettingsContent } from "@/components/sections/user/user-settings-content"
+
+import { Button } from "../ui/button"
+import { cn } from "../../lib/utils"
+import { Avatar, AvatarFallback, AvatarImage } from "../ui/avatar"
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "../ui/dropdown-menu"
+import { Popover, PopoverContent, PopoverTrigger } from "../ui/popover"
+import { LayoutDashboard, FileText, Building, Users, Settings, Menu, Plus, User, Shield, LogOut, ChevronRight } from "lucide-react"
+import { SuperAdminPetitionContent } from "../sections/super-admin/petitions-content"
+import { DepartmentsContent } from "../sections/super-admin/departments-content"
+import { UsersContent } from "../sections/super-admin/users-content"
 import { SettingsContent } from "../sections/settings/settings-content"
 
 
-// Mock data for user petitions
+// Mock data for all petitions
 const mockPetitions = [
   {
-    id: 1,
+    id: 201,
     title: "Road Repair on Main Street",
     department: "Infrastructure",
-    status: "Under Review",
+    submittedBy: "John Doe",
+    status: "In Progress",
+    priority: "High",
     createdAt: "2023-04-15",
-    description: "The road on Main Street has several potholes that need to be fixed urgently.",
   },
   {
-    id: 2,
-    title: "Improve Street Lighting in Downtown Area",
-    department: "Public Safety",
-    status: "Assigned",
-    createdAt: "2023-03-28",
-    description: "The downtown area needs better street lighting to improve safety at night.",
+    id: 202,
+    title: "New Textbooks for Elementary School",
+    department: "Education",
+    submittedBy: "Jane Smith",
+    status: "New",
+    priority: "Medium",
+    createdAt: "2023-04-12",
   },
   {
-    id: 3,
-    title: "Request for Public Park Maintenance",
+    id: 203,
+    title: "Hospital Equipment Upgrade",
+    department: "Healthcare",
+    submittedBy: "Robert Johnson",
+    status: "Under Review",
+    priority: "High",
+    createdAt: "2023-04-10",
+  },
+  {
+    id: 204,
+    title: "Public Park Renovation",
     department: "Environment",
+    submittedBy: "Sarah Williams",
     status: "Completed",
-    createdAt: "2023-02-10",
-    description: "The public park needs maintenance, including lawn mowing and trash removal.",
+    priority: "Medium",
+    createdAt: "2023-04-05",
   },
+  {
+    id: 205,
+    title: "Additional Street Lights in Downtown",
+    department: "Public Safety",
+    submittedBy: "Michael Brown",
+    status: "In Progress",
+    priority: "Low",
+    createdAt: "2023-04-02",
+  }
 ]
 
 // Navigation items data for cleaner code
 const navItems = [
   { id: "dashboard", label: "Dashboard", icon: LayoutDashboard, isPro: false },
-  { id: "new-petition", label: "New Petition", icon: Plus, isPro: false, badge: "Create" },
-  { id: "my-petitions", label: "My Petitions", icon: History, isPro: false },
+  { id: "petitions", label: "All Petitions", icon: FileText, isPro: false },
+  { id: "departments", label: "Departments", icon: Building, isPro: false },
+  { id: "users", label: "Users", icon: Users, isPro: false },
   { id: "settings", label: "Settings", icon: Settings, isPro: false },
 ]
 
-export function UserDashboardLayout({ children }: { children: React.ReactNode }) {
+export function SuperAdminLayout({ children }: { children: React.ReactNode }) {
   const [isSidebarOpen, setSidebarOpen] = useState(false);
   const [activeTab, setActiveTab] = useState("dashboard");
   const [petitions, setPetitions] = useState(mockPetitions);
@@ -102,15 +123,32 @@ export function UserDashboardLayout({ children }: { children: React.ReactNode })
   const renderActiveContent = () => {
     switch (activeTab) {
       case "dashboard":
-        return <UserDashboardContent petitions={petitions} />;
-      case "new-petition":
-        return <UserNewPetitionContent />;
-      case "my-petitions":
-        return <UserMyPetitionsContent petitions={petitions} />;
+        return children;
+      case "petitions":
+        return (
+          
+          <div className="p-6">
+            <h2 className="text-2xl font-bold mb-4 bg-gradient-to-r from-purple-200 to-fuchsia-200 bg-clip-text text-transparent">All Petitions</h2>
+            <p className="text-slate-400 mb-6">View and manage all petitions across the system</p>
+            {<SuperAdminPetitionContent petitions={petitions}/>}
+          </div>
+        );
+      case "departments":
+        return (
+            <DepartmentsContent />
+        );
+      case "users":
+        return (
+
+            <UsersContent />
+        );
       case "settings":
-        return <SettingsContent />;
+        return (
+         
+            <SettingsContent />
+        );
       default:
-        return <UserDashboardContent petitions={petitions} />;
+        return children;
     }
   };
 
@@ -129,8 +167,8 @@ export function UserDashboardLayout({ children }: { children: React.ReactNode })
             >
               <Menu className="h-5 w-5" />
             </Button>
-            <Link href="/dashboard/user" className="flex items-center" onClick={() => setActiveTab("dashboard")}>
-              <div className="h-8 w-8 rounded-md bg-gradient-to-br from-violet-500 to-indigo-600 flex items-center justify-center mr-2 shadow-lg shadow-violet-900/30">
+            <Link href="/dashboard/super-admin" className="flex items-center" onClick={() => setActiveTab("dashboard")}>
+              <div className="h-8 w-8 rounded-md bg-gradient-to-br from-purple-500 to-fuchsia-600 flex items-center justify-center mr-2 shadow-lg shadow-purple-900/30">
                 <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="text-white">
                   <path d="M18 8h1a4 4 0 0 1 0 8h-1"></path>
                   <path d="M2 8h16v9a4 4 0 0 1-4 4H6a4 4 0 0 1-4-4V8z"></path>
@@ -139,33 +177,33 @@ export function UserDashboardLayout({ children }: { children: React.ReactNode })
                   <line x1="14" y1="1" x2="14" y2="4"></line>
                 </svg>
               </div>
-              <h1 className="text-xl font-bold bg-gradient-to-r from-violet-200 to-indigo-200 text-transparent bg-clip-text">
+              <h1 className="text-xl font-bold bg-gradient-to-r from-purple-200 to-fuchsia-200 text-transparent bg-clip-text">
                 Petition System
               </h1>
             </Link>
           </div>
           
           <div className="flex items-center ml-auto gap-1 md:gap-3">
-            {/* Create Petition Button */}
+            {/* Add Department Button */}
             <Popover>
               <PopoverTrigger asChild>
-                <Button className="hidden md:flex items-center gap-1.5 bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-500 hover:to-indigo-500 text-white shadow-lg shadow-violet-900/30 transition-all duration-300 group relative overflow-hidden"
-                  onClick={() => setActiveTab("new-petition")}
+                <Button className="hidden md:flex items-center gap-1.5 bg-gradient-to-r from-purple-600 to-fuchsia-600 hover:from-purple-500 hover:to-fuchsia-500 text-white shadow-lg shadow-purple-900/30 transition-all duration-300 group relative overflow-hidden"
+                  onClick={() => setActiveTab("departments")}
                 >
                   <Plus className="h-4 w-4" />
-                  <span>New Petition</span>
+                  <span>New Department</span>
                   <span className="absolute inset-0 h-full w-full scale-0 rounded-md bg-white/10 transition-all duration-300 group-hover:scale-100 group-hover:opacity-100" />
                 </Button>
               </PopoverTrigger>
               <PopoverContent className="w-56 bg-slate-900 border-slate-800 shadow-lg shadow-slate-950/50 p-0">
                 <div className="flex flex-col">
                   <Button variant="ghost" className="flex items-center justify-start gap-2 rounded-none text-slate-200 hover:text-white py-6 hover:bg-slate-800">
-                    <div className="h-8 w-8 rounded-full bg-indigo-600/20 flex items-center justify-center">
-                      <FileText className="h-4 w-4 text-indigo-400" />
+                    <div className="h-8 w-8 rounded-full bg-fuchsia-600/20 flex items-center justify-center">
+                      <Building className="h-4 w-4 text-fuchsia-400" />
                     </div>
                     <div className="flex flex-col items-start">
-                      <span className="text-sm font-medium">Submit Petition</span>
-                      <span className="text-xs text-slate-400">Request a new service</span>
+                      <span className="text-sm font-medium">Add Department</span>
+                      <span className="text-xs text-slate-400">Create new department</span>
                     </div>
                   </Button>
                 </div>
@@ -176,8 +214,8 @@ export function UserDashboardLayout({ children }: { children: React.ReactNode })
             <Button
               variant="default"
               size="icon"
-              className="md:hidden bg-gradient-to-r from-violet-600 to-indigo-600 text-white shadow-md"
-              onClick={() => setActiveTab("new-petition")}
+              className="md:hidden bg-gradient-to-r from-purple-600 to-fuchsia-600 text-white shadow-md"
+              onClick={() => setActiveTab("departments")}
             >
               <Plus className="h-4 w-4" />
             </Button>
@@ -186,21 +224,21 @@ export function UserDashboardLayout({ children }: { children: React.ReactNode })
             <div className="relative ml-2">
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" className="relative h-9 w-9 rounded-full border border-slate-700/50 hover:border-violet-500/50 transition-all duration-300 p-0">
+                  <Button variant="ghost" className="relative h-9 w-9 rounded-full border border-slate-700/50 hover:border-purple-500/50 transition-all duration-300 p-0">
                     <Avatar>
-                      <AvatarImage src="/placeholder-user.jpg" alt="User" />
-                      <AvatarFallback className="bg-violet-900/60 text-violet-200">JD</AvatarFallback>
+                      <AvatarImage src="/placeholder-user.jpg" alt="Super Admin" />
+                      <AvatarFallback className="bg-purple-900/60 text-purple-200">SA</AvatarFallback>
                     </Avatar>
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent className="w-56 bg-slate-900 border-slate-800 shadow-xl shadow-slate-950/50 mt-1">
                   <div className="flex items-center gap-2 p-3">
-                    <div className="bg-violet-900/60 h-10 w-10 rounded-full flex items-center justify-center text-violet-200">
-                      JD
+                    <div className="bg-purple-900/60 h-10 w-10 rounded-full flex items-center justify-center text-purple-200">
+                      SA
                     </div>
                     <div>
-                      <div className="font-medium text-sm text-slate-200">John Doe</div>
-                      <div className="text-xs text-slate-400">john.doe@example.com</div>
+                      <div className="font-medium text-sm text-slate-200">Super Admin</div>
+                      <div className="text-xs text-slate-400">admin@petitionsystem.gov</div>
                     </div>
                   </div>
                   <DropdownMenuSeparator className="bg-slate-800" />
@@ -255,12 +293,12 @@ export function UserDashboardLayout({ children }: { children: React.ReactNode })
               <div className="p-4">
                 <div className="mb-6">
                   <div className="flex items-center px-2 mb-6">
-                    <div className="w-8 h-8 rounded-full bg-gradient-to-br from-violet-500 to-indigo-500 flex items-center justify-center text-white text-sm font-bold">
-                      JD
+                    <div className="w-8 h-8 rounded-full bg-gradient-to-br from-purple-500 to-fuchsia-500 flex items-center justify-center text-white text-sm font-bold">
+                      <Shield className="h-4 w-4" />
                     </div>
                     <div className="ml-3">
-                      <p className="text-sm font-medium text-slate-200">John Doe</p>
-                      <p className="text-xs text-slate-400">Citizen</p>
+                      <p className="text-sm font-medium text-slate-200">Super Admin</p>
+                      <p className="text-xs text-slate-400">System Administrator</p>
                     </div>
                   </div>
                   <div className="h-px bg-gradient-to-r from-transparent via-slate-700/50 to-transparent mb-6"></div>
@@ -318,7 +356,7 @@ export function UserDashboardLayout({ children }: { children: React.ReactNode })
             >
               <button 
                 onClick={() => setActiveTab("dashboard")} 
-                className="hover:text-violet-300 transition-colors flex items-center"
+                className="hover:text-purple-300 transition-colors flex items-center"
               >
                 <LayoutDashboard className="h-3.5 w-3.5 mr-1.5" />
                 Dashboard
@@ -327,13 +365,17 @@ export function UserDashboardLayout({ children }: { children: React.ReactNode })
                 <>
                   <ChevronRight className="h-3 w-3 text-slate-600" />
                   <span className="text-slate-200 font-medium">
-                    {activeTab === "new-petition"
-                      ? 'New Petition'
-                      : activeTab === "my-petitions"
-                        ? 'My Petitions'
-                        : activeTab === "settings"
-                          ? 'Settings'
-                          : 'Page'}
+                    {activeTab === "petitions"
+                      ? 'All Petitions'
+                      : activeTab === "departments"
+                        ? 'Departments'
+                        : activeTab === "users"
+                          ? 'Users'
+                          : activeTab === "analytics"
+                            ? 'Analytics'
+                            : activeTab === "settings"
+                              ? 'Settings'
+                              : 'Page'}
                   </span>
                 </>
               )}
@@ -349,13 +391,13 @@ export function UserDashboardLayout({ children }: { children: React.ReactNode })
             className="relative"
           >
             {/* Decorative elements */}
-            <div className="absolute top-0 right-0 w-64 h-64 bg-violet-500/5 rounded-full blur-3xl -z-10" aria-hidden="true"></div>
-            <div className="absolute bottom-0 left-0 w-96 h-96 bg-indigo-500/5 rounded-full blur-3xl -z-10" aria-hidden="true"></div>
+            <div className="absolute top-0 right-0 w-64 h-64 bg-purple-500/5 rounded-full blur-3xl -z-10" aria-hidden="true"></div>
+            <div className="absolute bottom-0 left-0 w-96 h-96 bg-fuchsia-500/5 rounded-full blur-3xl -z-10" aria-hidden="true"></div>
 
             {/* Gradient border container */}
             <div className="relative rounded-xl bg-slate-900/50 backdrop-blur-sm border border-slate-800/60 shadow-lg overflow-hidden">
               {/* Top decorative gradient line */}
-              <div className="absolute top-0 inset-x-0 h-px bg-gradient-to-r from-transparent via-violet-500/40 to-transparent"></div>
+              <div className="absolute top-0 inset-x-0 h-px bg-gradient-to-r from-transparent via-purple-500/40 to-transparent"></div>
               
               {/* Content with padding */}
               <div className="w-full">
@@ -363,7 +405,7 @@ export function UserDashboardLayout({ children }: { children: React.ReactNode })
               </div>
               
               {/* Bottom decorative gradient line */}
-              <div className="absolute bottom-0 inset-x-0 h-px bg-gradient-to-r from-transparent via-indigo-500/40 to-transparent"></div>
+              <div className="absolute bottom-0 inset-x-0 h-px bg-gradient-to-r from-transparent via-fuchsia-500/40 to-transparent"></div>
             </div>
           </motion.div>
           
@@ -394,21 +436,21 @@ function NavItem({ item, isActive, onClick }: {
       onClick={onClick}
     >
       <div className={cn(
-        "absolute left-0 top-0 bottom-0 w-[3px] bg-gradient-to-b from-violet-500 to-indigo-500 transition-transform duration-300",
+        "absolute left-0 top-0 bottom-0 w-[3px] bg-gradient-to-b from-purple-500 to-fuchsia-500 transition-transform duration-300",
         isActive ? "scale-y-100" : "scale-y-0 group-hover:scale-y-100"
       )}></div>
 
       <item.icon className={cn(
         "mr-2 h-4 w-4 transition-colors duration-300",
-        isActive ? "text-violet-300" : "text-slate-400 group-hover:text-violet-300"
+        isActive ? "text-purple-300" : "text-slate-400 group-hover:text-purple-300"
       )} />
       {item.label}
       {item.badge && (
-        <span className="ml-auto bg-gradient-to-r from-violet-500 to-indigo-500 text-[10px] py-0.5 px-1.5 rounded-full font-medium text-white">
+        <span className="ml-auto bg-gradient-to-r from-purple-500 to-fuchsia-500 text-[10px] py-0.5 px-1.5 rounded-full font-medium text-white">
           {item.badge}
         </span>
       )}
-      <span className="absolute inset-0 h-full w-full scale-0 rounded-md bg-gradient-to-r from-violet-600/5 to-indigo-600/5 transition-all duration-300 group-hover:scale-100 group-hover:opacity-100" />
+      <span className="absolute inset-0 h-full w-full scale-0 rounded-md bg-gradient-to-r from-purple-600/5 to-fuchsia-600/5 transition-all duration-300 group-hover:scale-100 group-hover:opacity-100" />
     </Button>
   )
 }

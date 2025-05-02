@@ -1,21 +1,21 @@
 'use client'
 
-import type React from "react"
-import Link from "next/link"
+import React, { useState, useEffect } from "react"
 import { usePathname } from "next/navigation"
+import Link from "next/link"
 import { motion } from "framer-motion"
-import { Button } from "@/components/ui/button"
-import { LayoutDashboard, Users, FileText, Settings, LogOut, User, Menu, ChevronRight, Bell, Search, Plus, HelpCircle, Moon, Sun } from "lucide-react"
-import { useState, useEffect } from "react"
-import { cn } from "@/lib/utils"
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
-import { Badge } from "@/components/ui/badge"
-import { Input } from "@/components/ui/input"
-import DashboardContent from "@/components/sections/department-admin/dashboard-content"
-import StaffContent from "@/components/sections/department-admin/staff-content"
-import PetitionsContent from "@/components/sections/department-admin/petitions-content"
+import { LayoutDashboard, FileText, Users, Settings, Menu, Plus, User, LogOut, ChevronRight } from "lucide-react"
+
+import { Button } from "../ui/button"
+import { cn } from "../../lib/utils"
+import { Avatar, AvatarFallback, AvatarImage } from "../ui/avatar"
+import { Popover, PopoverContent, PopoverTrigger } from "../ui/popover"
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "../../components/ui/dropdown-menu"
+import { Badge } from "../../components/ui/badge"
+import { Input } from "../../components/ui/input"
+import DashboardContent from "../../components/sections/department-admin/dashboard-content"
+import StaffContent from "../../components/sections/department-admin/staff-content"
+import PetitionsContent from "../../components/sections/department-admin/petitions-content"
 import { SettingsContent } from "../sections/settings/settings-content"
 
 // Navigation items data for cleaner code
@@ -173,7 +173,7 @@ export function DepartmentAdminLayout({ children }: { children: React.ReactNode 
                     </div>
                     <div>
                       <div className="font-medium text-sm text-slate-200">Department Admin</div>
-                      <div className="text-xs text-slate-400">admin@infrastructure.gov</div>
+                      <div className="text-xs text-slate-400">admin../..infrastructure.gov</div>
                     </div>
                   </div>
                   <DropdownMenuSeparator className="bg-slate-800" />

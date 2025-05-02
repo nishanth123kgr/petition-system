@@ -1,15 +1,15 @@
 'use client'
 
-import { useState } from "react"
+import React, { useState } from "react"
 import { motion } from "framer-motion"
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
-import { Badge } from "@/components/ui/badge"
-import { Input } from "@/components/ui/input"
-import { Button } from "@/components/ui/button"
-import { Label } from "@/components/ui/label"
-import { Switch } from "@/components/ui/switch"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "../../../components/ui/card"
+import { Badge } from "../../../components/ui/badge"
+import { Input } from "../../../components/ui/input"
+import { Button } from "../../../components/ui/button"
+import { Label } from "../../../components/ui/label"
+import { Switch } from "../../../components/ui/switch"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "../../../components/ui/tabs"
+import { Avatar, AvatarFallback, AvatarImage } from "../../../components/ui/avatar"
 import { User, Bell, Shield, Key, Mail, LogOut, Lock, Save, AlertCircle } from "lucide-react"
 
 // Animation variants

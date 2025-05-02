@@ -1,20 +1,19 @@
 'use client'
 
-import type React from "react"
-import Link from "next/link"
+import React, { useState, useEffect } from "react"
 import { usePathname } from "next/navigation"
+import Link from "next/link"
 import { motion } from "framer-motion"
-import { Button } from "@/components/ui/button"
-import { LayoutDashboard, FileText, Settings, LogOut, User, Menu, ChevronRight, Bell, Plus } from "lucide-react"
-import { useState, useEffect } from "react"
-import { cn } from "@/lib/utils"
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 
-import { StaffDashboardContent } from "@/components/sections/staff/staff-dashboard-content"
-import { StaffPetitionsContent } from "@/components/sections/staff/staff-petitions-content"
-import { SettingsContent } from "@/components/sections/settings/settings-content"
+import { Button } from "../ui/button"
+import { cn } from "../../lib/utils"
+import { Avatar, AvatarFallback, AvatarImage } from "../ui/avatar"
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "../ui/dropdown-menu"
+import { Popover, PopoverContent, PopoverTrigger } from "../ui/popover"
+import { Bell, Calendar, ChevronRight, ClipboardList, FileText, History, LayoutDashboard, LogOut, Menu, MessageSquare, Plus, Search, Settings, User } from "lucide-react"
+import { StaffDashboardContent } from "../sections/staff/staff-dashboard-content"
+import { StaffPetitionsContent } from "../sections/staff/staff-petitions-content"
+import { SettingsContent } from "../sections/settings/settings-content"
 
 // Navigation items data for cleaner code
 const navItems = [

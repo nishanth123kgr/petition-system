@@ -1,6 +1,7 @@
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
+import React from "react"
+import { Button } from "../../../../components/ui/button"
+import { Input } from "../../../../components/ui/input"
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "../../../../components/ui/dialog"
 import { Plus } from "lucide-react"
 import { NewDepartmentData } from "./types"
 
