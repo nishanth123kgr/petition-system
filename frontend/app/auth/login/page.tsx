@@ -8,6 +8,8 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import { loginUser } from "../utils/authUtils"
+import {getUserRoleWithID} from "../../utils/userUtils.js"
 
 export default function LoginPage() {
   const router = useRouter()
@@ -36,15 +38,65 @@ export default function LoginPage() {
     }
   }
 
+
+  const verifyInputs = () => {
+    if (!userEmail || !userPassword) {
+      alert("Please fill in all fields.")
+      setIsLoading(false)
+      return
+    }
+    if (!/\S+@\S+\.\S+/.test(userEmail)) {
+      alert("Please enter a valid email address.")
+      setIsLoading(false)
+      return
+    }
+    if (userPassword.length < 6) {
+      alert("Password must be at least 6 characters long.")
+      setIsLoading(false)
+      return
+    }
+    if (userPassword.length > 20) {
+      alert("Password must be less than 20 characters long.")
+      setIsLoading(false)
+      return
+    }
+    if (!/^[a-zA-Z0-9!@#$%^&*]+$/.test(userPassword)) {
+      alert("Password can only contain letters, numbers, and special characters.")
+      setIsLoading(false)
+      return
+    }
+    if (userPassword === userEmail) {
+      alert("Password cannot be the same as email.")
+      setIsLoading(false)
+      return
+    }
+    if (userPassword === userEmail.split("@")[0]) {
+      alert("Password cannot be the same as username.")
+      setIsLoading(false)
+      return
+    }
+  }
+
   const handleUserLogin = async (e: React.FormEvent) => {
     e.preventDefault()
     setIsLoading(true)
-    
-    // Simulate authentication delay
-    await new Promise(resolve => setTimeout(resolve, 800))
-    
-    // In a real app, you would authenticate the user here
-    router.push("/dashboard/user")
+
+    verifyInputs();
+
+    try {
+      const response = await loginUser(userEmail, userPassword)
+      
+      if (response.success) {
+        router.push(`/dashboard/${getUserRoleWithID(response.role)}`)
+      } else {
+        alert("Login failed. Please check your credentials.")
+      }
+    } catch (error) {
+      console.error("Login error:", error)
+      alert("An error occurred. Please try again.")
+    } finally {
+      setIsLoading(false)
+    }
   }
 
   return (
@@ -57,7 +109,7 @@ export default function LoginPage() {
       >
         <Card className="bg-slate-900/70 backdrop-blur-xl border-slate-800/50 shadow-2xl shadow-violet-900/20 overflow-hidden">
           <div className="absolute inset-0 bg-gradient-to-br from-violet-600/5 to-indigo-600/5 z-0" />
-          
+
           <motion.div variants={itemVariants}>
             <CardHeader className="relative z-10 text-center pb-2">
               <CardTitle className="text-2xl font-bold bg-gradient-to-r from-violet-200 to-indigo-200 bg-clip-text text-transparent">
@@ -68,7 +120,7 @@ export default function LoginPage() {
               </CardDescription>
             </CardHeader>
           </motion.div>
-          
+
           <motion.div variants={itemVariants}>
             <CardContent className="relative z-10">
               <form onSubmit={handleUserLogin} className="space-y-5 mt-4">
@@ -88,13 +140,13 @@ export default function LoginPage() {
                     />
                     <div className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500">
                       <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-mail">
-                        <rect width="20" height="16" x="2" y="4" rx="2"/>
-                        <path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/>
+                        <rect width="20" height="16" x="2" y="4" rx="2" />
+                        <path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7" />
                       </svg>
                     </div>
                   </div>
                 </div>
-                
+
                 <div className="space-y-2">
                   <div className="flex items-center justify-between">
                     <Label htmlFor="user-password" className="text-slate-300 text-sm font-medium">
@@ -118,12 +170,12 @@ export default function LoginPage() {
                     />
                     <div className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500">
                       <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-lock">
-                        <rect width="18" height="11" x="3" y="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+                        <rect width="18" height="11" x="3" y="11" rx="2" ry="2" /><path d="M7 11V7a5 5 0 0 1 10 0v4" />
                       </svg>
                     </div>
                   </div>
                 </div>
-                
+
                 <Button
                   type="submit"
                   disabled={isLoading}
@@ -135,13 +187,13 @@ export default function LoginPage() {
               </form>
             </CardContent>
           </motion.div>
-          
+
           <motion.div variants={itemVariants}>
             <CardFooter className="relative z-10 flex justify-center pb-8 pt-2">
               <p className="text-sm text-slate-400">
                 Don't have an account?{" "}
-                <Link 
-                  href="/auth/register" 
+                <Link
+                  href="/auth/register"
                   className="text-violet-400 hover:text-violet-300 font-medium transition-colors duration-200 hover:underline decoration-2 underline-offset-2"
                 >
                   Register
@@ -149,11 +201,11 @@ export default function LoginPage() {
               </p>
             </CardFooter>
           </motion.div>
-          
+
           <div className="absolute w-40 h-40 bg-violet-600/10 -bottom-20 -left-20 rounded-full blur-2xl z-0" />
           <div className="absolute w-40 h-40 bg-indigo-600/10 -top-20 -right-20 rounded-full blur-2xl z-0" />
         </Card>
-        
+
         <motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}

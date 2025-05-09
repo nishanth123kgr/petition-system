@@ -3,9 +3,8 @@ import React from 'react'
 import './globals.css'
 
 export const metadata: Metadata = {
-  title: 'v0 App',
-  description: 'Created with v0',
-  generator: 'v0.dev',
+  title: 'Petition Management System',
+  description: 'A system to manage petitions effectively.',
 }
 
 export default function RootLayout({
