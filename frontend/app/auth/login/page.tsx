@@ -10,9 +10,11 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { loginUser } from "../utils/authUtils"
 import {getUserRoleWithID} from "../../utils/userUtils.js"
+import { useToast } from "@/hooks/use-toast"
 
 export default function LoginPage() {
   const router = useRouter()
+  const { toast } = useToast()
   const [userEmail, setUserEmail] = useState("")
   const [userPassword, setUserPassword] = useState("")
   const [isLoading, setIsLoading] = useState(false)
@@ -41,59 +43,109 @@ export default function LoginPage() {
 
   const verifyInputs = () => {
     if (!userEmail || !userPassword) {
-      alert("Please fill in all fields.")
+      toast({
+        title: "Missing fields",
+        description: "Please fill in all fields.",
+        variant: "warning"
+      })
       setIsLoading(false)
-      return
+      return false;
     }
     if (!/\S+@\S+\.\S+/.test(userEmail)) {
-      alert("Please enter a valid email address.")
+      toast({
+        title: "Invalid email",
+        description: "Please enter a valid email address.",
+        variant: "warning"
+      })
       setIsLoading(false)
-      return
+      return false;
     }
     if (userPassword.length < 6) {
-      alert("Password must be at least 6 characters long.")
+      toast({
+        title: "Password too short",
+        description: "Password must be at least 6 characters long.",
+        variant: "warning"
+      })
       setIsLoading(false)
-      return
+      return false
     }
     if (userPassword.length > 20) {
-      alert("Password must be less than 20 characters long.")
+      toast({
+        title: "Password too long",
+        description: "Password must be less than 20 characters long.",
+        variant: "warning"
+      })
       setIsLoading(false)
-      return
+      return false;
     }
     if (!/^[a-zA-Z0-9!@#$%^&*]+$/.test(userPassword)) {
-      alert("Password can only contain letters, numbers, and special characters.")
+      toast({
+        title: "Invalid characters",
+        description: "Password can only contain letters, numbers, and special characters.",
+        variant: "warning"
+      })
       setIsLoading(false)
-      return
+      return false;
     }
     if (userPassword === userEmail) {
-      alert("Password cannot be the same as email.")
+      toast({
+        title: "Security risk",
+        description: "Password cannot be the same as email.",
+        variant: "warning"
+      })
       setIsLoading(false)
-      return
+      return false;
     }
     if (userPassword === userEmail.split("@")[0]) {
-      alert("Password cannot be the same as username.")
+      toast({
+        title: "Security risk",
+        description: "Password cannot be the same as username.",
+        variant: "warning"
+      })
       setIsLoading(false)
-      return
+      return false;
     }
+    return true;
   }
 
   const handleUserLogin = async (e: React.FormEvent) => {
     e.preventDefault()
     setIsLoading(true)
 
-    verifyInputs();
+    const isValid = verifyInputs();
+    if (!isValid) return;
 
     try {
       const response = await loginUser(userEmail, userPassword)
       
       if (response.success) {
-        router.push(`/dashboard/${getUserRoleWithID(response.role)}`)
+        // Show success toast before redirecting
+        toast({
+          title: "Login successful",
+          description: "Redirecting to dashboard...",
+          variant: "success",
+        })
+        
+        // Short delay before redirecting to allow the toast to be seen
+        setTimeout(() => {
+          router.push(`/dashboard/${getUserRoleWithID(response.role)}`)
+        }, 1000)
       } else {
-        alert("Login failed. Please check your credentials.")
+        console.log("Login failed:", response.error);
+        
+        toast({
+          title: "Login failed",
+          description: "Please check your credentials.",
+          variant: "destructive",
+        })
       }
     } catch (error) {
       console.error("Login error:", error)
-      alert("An error occurred. Please try again.")
+      toast({
+        title: "Error",
+        description: "An error occurred. Please try again.",
+        variant: "destructive",
+      })
     } finally {
       setIsLoading(false)
     }

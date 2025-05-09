@@ -14,14 +14,14 @@ export async function registerUser(userData) {
             email: userData.email,
             salt: salt,
             verifier: verifier
-        };        
+        };
 
         const response = await callAPI('/api/auth/register', 'POST', userPayload);
 
         if (!response.success) {
             throw new Error('Failed to register user');
         }
-            
+
         return response;
     } catch (error) {
         console.error('Error registering user:', error);
@@ -37,40 +37,47 @@ export async function loginUser(email, password) {
         const initResponse = await callAPI('/api/auth/srp/init', 'POST', { email, clientPublic: clientEphemeral.public });
 
         if (!initResponse.success) {
-            throw new Error('Failed to login user');
+            return { success: false, message: 'Failed to initialize login' };
         }
 
-        const {salt, serverPublic} = initResponse.data;
+        const { salt, serverPublic } = initResponse.data;
 
         console.log("User salt:", salt, "Server Public:", serverPublic)
-        
+
 
         const privateKey = srpClient.derivePrivateKey(salt, email, password);
         const clientSession = srpClient.deriveSession(clientEphemeral.secret, serverPublic.public, salt, email, privateKey);
 
         console.log('Client session:', clientSession);
 
+        let verifyResponse = await callAPI('/api/auth/srp/verify', 'POST', {
+                email,
+                clientPublic: clientEphemeral.public,
+                clientProof: clientSession.proof
+            });
         
 
-        const verifyResponse = await callAPI('/api/auth/srp/verify', 'POST', {
-            email,
-            clientPublic: clientEphemeral.public,
-            clientProof: clientSession.proof
-        });
-
-
+        if (!verifyResponse.success) {
+            console.error('Server verification failed:', verifyResponse);
+            return { success: false, message: 'Failed to verify server response' };
+        }
 
         const { serverProof } = verifyResponse.data;
 
-        srpClient.verifySession(clientEphemeral.public, clientSession, serverProof);
+        // Validate server proof
+        try {
+            srpClient.verifySession(clientEphemeral.public, clientSession, serverProof);
+        } catch (error) {
+            console.error('Server proof validation error:', error);
+            return { success: false, message: 'Failed to verify server proof' };
+        }
 
         console.log('Login successful:', { email, clientSession });
 
         verifyResponse.success = true;
-
         return verifyResponse;
     } catch (error) {
-        console.error('Error logging in user:', error);
-        throw error;
+        console.error('Login error:', error);
+        return { success: false, message: 'Login failed', error: error.message };
     }
 }

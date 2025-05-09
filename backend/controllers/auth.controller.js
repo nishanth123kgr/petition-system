@@ -29,22 +29,11 @@ export const srpInit = async (req, res) => {
 
         if (!data) {
             return res.status(404).json({ error: 'User not found' });
-        }
-
-        console.log('Initializing SRP for user:', email);
-        
+        }        
 
         const salt = data.salt;
         const verifier = data.verifier;
         const serverPublic = srpServer.generateEphemeral(verifier);
-
-        // const token = jwt.sign({
-        //     email,
-        //     salt,
-        //     verifier,
-        //     serverSecret: serverPublic.secret,
-        //     serverPublic: serverPublic.public
-        // }, JWT_SECRET, { expiresIn: '5m' });
 
         const token = generateToken({
             email,
@@ -65,10 +54,7 @@ export const srpInit = async (req, res) => {
 
 export const srpVerify = async (req, res) => {
     const { email, clientPublic, clientProof } = req.body;
-    try {
-
-        console.log("Verification Initiated");
-        
+    try {        
         // Validate clientProof is present
         if (!clientProof) {
             return res.status(400).json({ error: 'Client proof is required' });
@@ -81,8 +67,6 @@ export const srpVerify = async (req, res) => {
         }
 
         const token = req.cookies.jwt;
-
-        console.log(token);
 
         if (!token) {
             return res.status(401).json({ error: 'Authentication token missing' });
@@ -103,7 +87,6 @@ export const srpVerify = async (req, res) => {
             return res.status(401).json({ error: 'Invalid or expired token' });
         }
 
-        console.log(tokenData);
         
         // Make serverEphemeral available for verification
         const serverEphemeral = {
