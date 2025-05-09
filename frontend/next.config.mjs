@@ -13,9 +13,8 @@ const nextConfig = {
   // Update the basePath and assetPrefix if you're not using a custom domain
   basePath: '/petition-system',
   assetPrefix: '/petition-system/',
-  // Disable server components for static export
+  // Add static export configuration
   experimental: {
-    appDir: true,
   },
 }
 

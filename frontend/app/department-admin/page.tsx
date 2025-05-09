@@ -390,3 +390,31 @@ function NavItem({ item, onClick }: {
     </Link>
   )
 }
+
+// This configuration tells Next.js how to handle this page during static export
+export const dynamic = 'force-static';
+
+export default function DepartmentAdmin() {
+  return (
+    <DepartmentAdminLayout>
+      <div className="p-6">
+        <h2 className="text-2xl font-bold text-slate-200 mb-6">Department Admin Dashboard</h2>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          {/* Dashboard content goes here */}
+          <div className="bg-slate-800/50 backdrop-blur-sm rounded-lg border border-slate-700/40 p-4 shadow-lg">
+            <h3 className="text-lg font-medium text-violet-300 mb-2">Recent Petitions</h3>
+            <p className="text-slate-400 text-sm">View and manage recent petition submissions.</p>
+          </div>
+          <div className="bg-slate-800/50 backdrop-blur-sm rounded-lg border border-slate-700/40 p-4 shadow-lg">
+            <h3 className="text-lg font-medium text-indigo-300 mb-2">Staff Management</h3>
+            <p className="text-slate-400 text-sm">Add, edit, or remove staff members.</p>
+          </div>
+          <div className="bg-slate-800/50 backdrop-blur-sm rounded-lg border border-slate-700/40 p-4 shadow-lg">
+            <h3 className="text-lg font-medium text-blue-300 mb-2">Department Analytics</h3>
+            <p className="text-slate-400 text-sm">View statistics and analytics for your department.</p>
+          </div>
+        </div>
+      </div>
+    </DepartmentAdminLayout>
+  );
+}
