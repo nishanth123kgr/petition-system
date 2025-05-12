@@ -129,7 +129,25 @@ export const logout = (req, res) => {
 
 export const getCurrentUser = async (req, res) => {
     try {
-        // Logic to get current user details
+        // Check if user is authenticated
+        if (!req.user) {
+            return res.status(401).json({ error: 'Not authenticated' });
+        }
+        
+        // Get user details from database using email from token
+        const userData = await getUserByEmail(req.user.email);
+        
+        if (!userData) {
+            return res.json({ error: 'User not found' });
+        }
+        
+        // Set user details in request object, excluding sensitive information
+        req.user = {
+            name: userData.name,
+            email: userData.email,
+            role: userData.role,
+            // Add other non-sensitive fields as needed
+        };
         res.json({ user: req.user });
     } catch (error) {
         res.status(500).json({ error: error.message });

@@ -7,6 +7,12 @@ node_modules
 .next
 /.next
 /out/
+*/out
+out
+
+frontend/.next
+frontend/out
+
 
 # production
 /build

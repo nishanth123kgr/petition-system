@@ -2,7 +2,7 @@
 
 import type React from "react"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { motion } from "framer-motion"
@@ -11,14 +11,42 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { registerUser } from "../utils/authUtils.js"
+import { getUserRoleWithID } from "../../utils/userUtils.js"
+import { useToast } from "@/hooks/use-toast"
+import callAPI from "../../utils/apiCaller"
 
 export default function RegisterPage() {
   const router = useRouter()
+  const { toast } = useToast()
   const [name, setName] = useState("")
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
   const [confirmPassword, setConfirmPassword] = useState("")
   const [isLoading, setIsLoading] = useState(false)
+  const [isCheckingAuth, setIsCheckingAuth] = useState(true)
+
+  // Check if user is already authenticated
+  useEffect(() => {
+    async function checkAuthStatus() {
+      try {
+        const response = await callAPI('/api/auth/me', 'GET');
+        if (response && response.user) {
+          toast({
+            title: "Already authenticated",
+            description: "Redirecting to dashboard...",
+            variant: "default",
+          })
+          router.push(`/dashboard/${getUserRoleWithID(response.user.role)}`)
+        }
+      } catch (error) {
+        console.log("Not authenticated, showing register page")
+      } finally {
+        setIsCheckingAuth(false)
+      }
+    }
+
+    checkAuthStatus()
+  }, [router, toast])
 
   // Animation variants
   const containerVariants = {

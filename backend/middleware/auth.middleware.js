@@ -9,7 +9,7 @@ export const authenticateJWT = (req, res, next) => {
     // Get token from Authorization header or cookies
     const authHeader = req.headers.authorization;
     const tokenFromHeader = authHeader && authHeader.split(' ')[1];
-    const tokenFromCookie = req.cookies && req.cookies.token;
+    const tokenFromCookie = req.cookies && req.cookies.jwt;
     const token = tokenFromHeader || tokenFromCookie;
 
     if (!token) {
