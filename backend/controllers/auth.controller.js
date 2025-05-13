@@ -36,6 +36,7 @@ export const srpInit = async (req, res) => {
         const serverPublic = srpServer.generateEphemeral(verifier);
 
         const token = generateToken({
+            
             email,
             salt,
             verifier,
@@ -105,10 +106,18 @@ export const srpVerify = async (req, res) => {
             return res.status(401).json({ error: 'Invalid proof' });
         }
 
+        let departmentId = null;
+        if(data.role === 2) {
+            departmentId = await getDepartmentIdFromAdminId(data.id);
+        }
+
+
         const authToken = generateToken({
+            id: data.id,
             name: data.name,
             email,
-            role: data.role
+            role: data.role,
+            departmentId,
         }, { expiresIn: '1h' });
 
         setTokenCookie(res, authToken);

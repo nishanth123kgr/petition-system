@@ -16,35 +16,10 @@ import { UserNewPetitionContent } from "../sections/user/user-new-petition-conte
 import { UserMyPetitionsContent } from "../sections/user/user-my-petitions-content"
 import { UserSettingsContent } from "../sections/user/user-settings-content"
 import { SettingsContent } from "../sections/settings/settings-content"
+import callAPI from "@/app/utils/apiCaller"
 
 
-// Mock data for user petitions
-const mockPetitions = [
-  {
-    id: 1,
-    title: "Road Repair on Main Street",
-    department: "Infrastructure",
-    status: "Under Review",
-    createdAt: "2023-04-15",
-    description: "The road on Main Street has several potholes that need to be fixed urgently.",
-  },
-  {
-    id: 2,
-    title: "Improve Street Lighting in Downtown Area",
-    department: "Public Safety",
-    status: "Assigned",
-    createdAt: "2023-03-28",
-    description: "The downtown area needs better street lighting to improve safety at night.",
-  },
-  {
-    id: 3,
-    title: "Request for Public Park Maintenance",
-    department: "Environment",
-    status: "Completed",
-    createdAt: "2023-02-10",
-    description: "The public park needs maintenance, including lawn mowing and trash removal.",
-  },
-]
+
 
 // Navigation items data for cleaner code
 const navItems = [
@@ -57,7 +32,20 @@ const navItems = [
 export function UserDashboardLayout({ children }: { children: React.ReactNode }) {
   const [isSidebarOpen, setSidebarOpen] = useState(false);
   const [activeTab, setActiveTab] = useState("dashboard");
-  const [petitions, setPetitions] = useState(mockPetitions);
+  const [petitions, setPetitions] = useState([]);
+
+  useEffect(() => {
+    const fetchPetitions = async () => {
+      let originalPetitions = await callAPI('/api/petitions', 'GET');
+      console.log("Fetched petitions:", originalPetitions);
+      if (originalPetitions && originalPetitions.success) {
+        setPetitions(originalPetitions.data);
+      } else {
+        setPetitions([]); 
+      }
+    };
+    fetchPetitions();
+  }, []);
   
   const pathname = usePathname();
 

@@ -13,16 +13,20 @@ export const authenticateJWT = (req, res, next) => {
     const token = tokenFromHeader || tokenFromCookie;
 
     if (!token) {
-        return res.status(401).json({ message: 'Access denied. No token provided.' });
+        return res.json({ message: 'Access denied. No token provided.' });
     }
 
-    const decoded = verifyToken(token);
-    
-    if (!decoded) {
-        return res.status(403).json({ message: 'Invalid token' });
+
+
+    try {
+        // Verify the token
+        const decoded = verifyToken(token);
+        req.user = decoded;
+    }
+    catch (error) {
+        return res.status(403).json({ message: 'Invalid token. Try Logging in' });
     }
     
-    req.user = decoded;
     next();
 };
 

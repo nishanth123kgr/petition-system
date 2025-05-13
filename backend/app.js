@@ -21,7 +21,9 @@ app.use(cors({
         callback(null, true); // Accept any origin
     },
     credentials: true
-})); app.use(bodyParser.json());
+}));
+
+app.use(bodyParser.json());
 app.use(cookieParser());
 
 // Routes

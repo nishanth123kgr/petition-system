@@ -45,7 +45,7 @@ const callAPI = async (url, method = defaultMethod, body = defaultBody, headers 
 
         return {
             success: true,
-            ...data
+            ...(Array.isArray(data) ? { data } : { ...data }),
         };
     } catch (error) {
         console.error('API call error:', error);

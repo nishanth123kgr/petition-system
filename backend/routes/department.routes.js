@@ -7,7 +7,7 @@ import {
   getDepartmentStaff,
   addStaffToDepartment,
   getDepartmentPetitions 
-} from '../controllers/department.controller.js';
+} from '../controllers/department/department.controller.js';
 import { authenticateJWT, authorizeRole } from '../middleware/auth.middleware.js';
 
 const router = Router();

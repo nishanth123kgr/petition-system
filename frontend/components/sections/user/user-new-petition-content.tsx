@@ -8,7 +8,9 @@ import { Input } from "../../../components/ui/input"
 import { Label } from "../../../components/ui/label"
 import { Textarea } from "../../../components/ui/textarea"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../../../components/ui/select"
-import { AlertCircle, FileText } from "lucide-react"
+import { AlertCircle, FileText, Loader2 } from "lucide-react"
+import callAPI from "../../../app/utils/apiCaller"
+import { useToast } from "@/hooks/use-toast"
 
 // Animation variants
 const containerVariants = {
@@ -37,8 +39,10 @@ export function UserNewPetitionContent() {
   const [description, setDescription] = useState("")
   const [location, setLocation] = useState("")
   const [formError, setFormError] = useState<string | null>(null)
+  const [isSubmitting, setIsSubmitting] = useState(false)
+  const { toast } = useToast()
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     
     // Basic validation - department is now optional
@@ -50,17 +54,40 @@ export function UserNewPetitionContent() {
     // Clear error if form is valid
     setFormError(null)
     
-    // Here you would typically send the data to your API
-    console.log({ title, department, description, location })
+    // Set loading state to true when starting submission
+    setIsSubmitting(true)
     
-    // Reset form after submission (in real app, you might redirect)
-    setTitle("")
-    setDepartment("")
-    setDescription("")
-    setLocation("")
-    
-    // Show success message (in real app, you might use a toast notification)
-    alert("Petition submitted successfully!")
+    try {
+      // Here you would typically send the data to your API
+      const result = await callAPI('/api/petitions', 'POST', {
+        title,
+        departmentName: department,
+        description,
+        location
+      } as any)
+      
+      if (result.error) {
+        setFormError("Failed to submit petition. Please try again.")
+        return
+      }
+      
+      // Reset form after submission (in real app, you might redirect)
+      setTitle("")
+      setDepartment("")
+      setDescription("")
+      setLocation("")
+      
+      toast({
+        title: "Petition submitted successfully",
+        description: "Your petition has been submitted.",
+        variant: "success",
+      })
+    } catch (error) {
+      setFormError("An error occurred while submitting the petition.")
+    } finally {
+      // Set loading state back to false regardless of outcome
+      setIsSubmitting(false)
+    }
   }
 
   return (
@@ -169,8 +196,16 @@ export function UserNewPetitionContent() {
                   <Button 
                     type="submit" 
                     className="bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-500 hover:to-indigo-500 text-white shadow-lg shadow-violet-900/30 transition-all duration-300 relative group overflow-hidden"
+                    disabled={isSubmitting}
                   >
-                    Submit Petition
+                    {isSubmitting ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        Submitting...
+                      </>
+                    ) : (
+                      "Submit Petition"
+                    )}
                     <span className="absolute inset-0 h-full w-full scale-0 rounded-md bg-white/10 transition-all duration-300 group-hover:scale-100 group-hover:opacity-100" />
                   </Button>
                 </div>

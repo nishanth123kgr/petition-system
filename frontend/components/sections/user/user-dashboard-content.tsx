@@ -43,25 +43,30 @@ interface UserDashboardContentProps {
     title: string
     status: string
     department: string
-    createdAt: string
+    created_at: string
     description: string
-  }>
+  }>      
 }
 
-export function UserDashboardContent({ petitions }: UserDashboardContentProps) {
-  const [searchTerm, setSearchTerm] = useState("")
-  const [statusFilter, setStatusFilter] = useState("all")
+export function UserDashboardContent({ petitions = [] }: UserDashboardContentProps) {
+  // const [searchTerm, setSearchTerm] = useState("")
+  // const [statusFilter, setStatusFilter] = useState("all")
 
-  const filteredPetitions = petitions.filter((petition) => {
-    const matchesSearch =
-      petition.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      petition.department.toLowerCase().includes(searchTerm.toLowerCase())
+  // const filteredPetitions = petitions.filter((petition) => {
+  //   const matchesSearch =
+  //     petition.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+  //     petition.department.toLowerCase().includes(searchTerm.toLowerCase())
 
-    const matchesStatus =
-      statusFilter === "all" || petition.status.toLowerCase().replace(" ", "-") === statusFilter.toLowerCase()
+  //   const matchesStatus =
+  //     statusFilter === "all" || petition.status.toLowerCase().replace(" ", "-") === statusFilter.toLowerCase()
 
-    return matchesSearch && matchesStatus
-  })
+  //   return matchesSearch && matchesStatus
+  // })
+
+  // Safely handle petitions if it's undefined or not an array
+  const petitionsArray = Array.isArray(petitions) ? petitions : []
+  
+  console.log("Petitions:", petitionsArray)
   
   return (
     <div className="p-6 space-y-6">
@@ -91,7 +96,7 @@ export function UserDashboardContent({ petitions }: UserDashboardContentProps) {
                   <CardTitle className="text-sm font-medium text-slate-300">My Petitions</CardTitle>
                 </CardHeader>
                 <CardContent className="relative z-10">
-                  <div className="text-2xl font-bold text-white">{petitions.length}</div>
+                  <div className="text-2xl font-bold text-white">{petitionsArray.length}</div>
                   <div className="text-xs text-slate-400 mt-1">Total petitions</div>
                 </CardContent>
                 <div className="absolute -bottom-4 -right-4 w-16 h-16 rounded-full bg-violet-500/10 flex items-center justify-center">
@@ -115,7 +120,7 @@ export function UserDashboardContent({ petitions }: UserDashboardContentProps) {
                 </CardHeader>
                 <CardContent className="relative z-10">
                   <div className="text-2xl font-bold text-white">
-                    {petitions.filter((p) => p.status === "In Progress" || p.status === "Assigned").length}
+                    {petitionsArray.filter((p) => p.status === "In Progress" || p.status === "Assigned").length}
                   </div>
                   <div className="text-xs text-slate-400 mt-1">Active petitions</div>
                 </CardContent>
@@ -142,7 +147,7 @@ export function UserDashboardContent({ petitions }: UserDashboardContentProps) {
                 </CardHeader>
                 <CardContent className="relative z-10">
                   <div className="text-2xl font-bold text-white">
-                    {petitions.filter(p => p.status === "Completed").length}
+                    {petitionsArray.filter(p => p.status === "Completed").length}
                   </div>
                   <div className="text-xs text-slate-400 mt-1">Resolved petitions</div>
                 </CardContent>
