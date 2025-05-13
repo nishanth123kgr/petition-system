@@ -71,13 +71,31 @@ export const createPetition = async (req, res) => {
 
 export const updatePetition = async (req, res) => {
   const { petitionId } = req.params;
+  const { updateMap } = req.body;
+  
   try {
-    // Logic to update petition
-    res.json({ message: 'Petition updated successfully', petition: {} });
+    if (!updateMap) {
+      return res.status(400).json({ error: 'Missing required fields' });
+    }
+    const {data, error} = await supabaseClient
+      .from('petitions')
+      .update(updateMap)
+      .eq('id', petitionId)
+      .select();
+
+    if (error) {
+      console.log(error);
+      return res.status(500).json({ error: error.message });
+    }
+
+    console.log(data);
+    
+    res.json({ message: 'Petition updated successfully' });
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
 };
+
 
 export const deletePetition = async (req, res) => {
   const { petitionId } = req.params;
@@ -121,7 +139,9 @@ export const getPetitions = async (req, res) => {
       const { departments, ...rest } = petition;
       return {
         ...rest,
-        department: departments?.name || null
+        department: departments?.name || null,
+        submitted_by: petition.submitted_by?.name || null,
+        assigned_to: petition.assigned_to?.name || null,
       };
     });
     res.json(formattedData);

@@ -43,7 +43,15 @@ export const getPetitionsForDepartment = async (departmentId) => {
     try {
         const { data, error } = await supabaseClient
             .from('petitions')
-            .select('*')
+            .select(`
+                *,
+                assigned_to:users!assigned_to (
+                name
+                ),
+                submitted_by:users!submitted_by (
+                name
+                )
+            `)
             .eq('department_id', departmentId);
 
         if (error) throw error;
@@ -60,7 +68,7 @@ export const getPetitionsForStaff = async (staffId) => {
         const { data, error } = await supabaseClient
             .from('petitions')
             .select('*')
-            .eq('staff_id', staffId);
+            .eq('assigned_to', staffId);
 
         if (error) throw error;
 

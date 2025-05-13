@@ -1,7 +1,7 @@
 import { generateToken, setTokenCookie, verifyToken } from '../utils/jwt/jwtUtils.js';
 import srpServer from 'secure-remote-password/server.js';
 import supabaseClient from '../middleware/supabase.middleware.js';
-import { getUserByEmail, createUser } from './user.controller.js';
+import { getUserByEmail, createUser, getDepartmentIdFromAdminId } from './user.controller.js';
 
 // Auth Controller
 export const register = async (req, res) => {
@@ -132,7 +132,7 @@ export const srpVerify = async (req, res) => {
 
 
 export const logout = (req, res) => {
-    res.clearCookie('token');
+    res.clearCookie('jwt');
     res.json({ message: 'Logged out successfully' });
 };
 

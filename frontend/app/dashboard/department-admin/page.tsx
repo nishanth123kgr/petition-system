@@ -7,8 +7,6 @@ export default function DepartmentAdminDashboardPage() {
   
 
   return (
-    <DepartmentAdminLayout>
-      <></>
-    </DepartmentAdminLayout>
+    <DepartmentAdminLayout />
   )
 }

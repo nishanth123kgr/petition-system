@@ -1,7 +1,7 @@
 'use client'
 
 import React, { useState, useEffect } from "react"
-import { usePathname } from "next/navigation"
+import { usePathname, useRouter } from "next/navigation"
 import Link from "next/link"
 import { motion } from "framer-motion"
 import { Plus, Settings, Menu, User, LogOut, FileText, LayoutDashboard, ChevronRight, History } from "lucide-react"
@@ -17,9 +17,8 @@ import { UserMyPetitionsContent } from "../sections/user/user-my-petitions-conte
 import { UserSettingsContent } from "../sections/user/user-settings-content"
 import { SettingsContent } from "../sections/settings/settings-content"
 import callAPI from "@/app/utils/apiCaller"
-
-
-
+import { getUserRoleWithID } from "@/app/utils/userUtils"
+import { useToast } from "@/hooks/use-toast"
 
 // Navigation items data for cleaner code
 const navItems = [
@@ -33,6 +32,50 @@ export function UserDashboardLayout({ children }: { children: React.ReactNode })
   const [isSidebarOpen, setSidebarOpen] = useState(false);
   const [activeTab, setActiveTab] = useState("dashboard");
   const [petitions, setPetitions] = useState([]);
+  const [name, setName] = useState("");
+  const [email, setEmail] = useState("");
+  const [avatar, setAvatar] = useState("");
+
+  const router = useRouter();
+  const { toast } = useToast();
+
+  useEffect(() => {
+    async function checkAuthStatus() {
+      try {
+        const response = await callAPI('/api/auth/me', 'GET');
+        if (response && response.user && response.user.role !== 0) {
+          toast({
+            title: "Unauthorized",
+            description: "You do not have permission to access this page",
+            variant: "destructive",
+          });
+          router.push('/auth/login');
+        }
+        if (response && response.user) {
+          setName(response.user.name);
+          setEmail(response.user.email);
+          setAvatar(response.user.name[0].toUpperCase());
+        } else {
+          toast({
+            title: "Authentication error",
+            description: "Please login to continue",
+            variant: "destructive",
+          });
+          router.push('/auth/login');
+        }
+      } catch (error) {
+        console.log("Authentication error:", error);
+        toast({
+          title: "Authentication error",
+          description: "Please login to continue",
+          variant: "destructive",
+        });
+        router.push('/auth/login');
+      }
+    }
+
+    checkAuthStatus();
+  }, [router, toast])
 
   useEffect(() => {
     const fetchPetitions = async () => {
@@ -41,12 +84,12 @@ export function UserDashboardLayout({ children }: { children: React.ReactNode })
       if (originalPetitions && originalPetitions.success) {
         setPetitions(originalPetitions.data);
       } else {
-        setPetitions([]); 
+        setPetitions([]);
       }
     };
     fetchPetitions();
   }, []);
-  
+
   const pathname = usePathname();
 
   // Close sidebar when pressing escape key
@@ -66,7 +109,7 @@ export function UserDashboardLayout({ children }: { children: React.ReactNode })
 
     window.addEventListener('keydown', handleEscKey);
     window.addEventListener('resize', handleResize);
-    
+
     return () => {
       window.removeEventListener('keydown', handleEscKey);
       window.removeEventListener('resize', handleResize);
@@ -79,12 +122,40 @@ export function UserDashboardLayout({ children }: { children: React.ReactNode })
       document.body.style.overflow = 'hidden';
     } else {
       document.body.style.overflow = '';
-    }
-    
+    };
+
     return () => {
       document.body.style.overflow = '';
     };
   }, [isSidebarOpen]);
+
+  async function handleLogout() {
+    try {
+      const response = await callAPI('/api/auth/logout');
+      if (response && response.success) {
+        toast({
+          title: "Logged out",
+          description: "You have been logged out successfully",
+          variant: "default",
+        });
+        router.push('/auth/login');
+      } else {
+        toast({
+          title: "Logout error",
+          description: "An error occurred while logging out",
+          variant: "destructive",
+        });
+      }
+    } catch (error) {
+      console.error("Logout error:", error);
+      toast({
+        title: "Logout error",
+        description: "An error occurred while logging out",
+        variant: "destructive",
+      });
+    }
+  }
+
 
   // Function to render the active tab content
   const renderActiveContent = () => {
@@ -132,7 +203,7 @@ export function UserDashboardLayout({ children }: { children: React.ReactNode })
               </h1>
             </Link>
           </div>
-          
+
           <div className="flex items-center ml-auto gap-1 md:gap-3">
             {/* Create Petition Button */}
             <Popover>
@@ -177,42 +248,35 @@ export function UserDashboardLayout({ children }: { children: React.ReactNode })
                   <Button variant="ghost" className="relative h-9 w-9 rounded-full border border-slate-700/50 hover:border-violet-500/50 transition-all duration-300 p-0">
                     <Avatar>
                       <AvatarImage src="/placeholder-user.jpg" alt="User" />
-                      <AvatarFallback className="bg-violet-900/60 text-violet-200">JD</AvatarFallback>
+                      <AvatarFallback className="bg-violet-900/60 text-violet-200">{avatar}</AvatarFallback>
                     </Avatar>
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent className="w-56 bg-slate-900 border-slate-800 shadow-xl shadow-slate-950/50 mt-1">
                   <div className="flex items-center gap-2 p-3">
                     <div className="bg-violet-900/60 h-10 w-10 rounded-full flex items-center justify-center text-violet-200">
-                      JD
+                      {avatar}
                     </div>
                     <div>
-                      <div className="font-medium text-sm text-slate-200">John Doe</div>
-                      <div className="text-xs text-slate-400">john.doe@example.com</div>
+                      <div className="font-medium text-sm text-slate-200">{name}</div>
+                      <div className="text-xs text-slate-400">{email}</div>
                     </div>
                   </div>
                   <DropdownMenuSeparator className="bg-slate-800" />
-                  <DropdownMenuItem 
-                    onClick={() => setActiveTab("settings")} 
-                    className="text-slate-200 focus:bg-slate-800 focus:text-white cursor-pointer"
-                  >
-                    <User className="mr-2 h-4 w-4" />
-                    <span>Profile</span>
-                  </DropdownMenuItem>
-                  <DropdownMenuItem 
-                    onClick={() => setActiveTab("settings")} 
+                  <DropdownMenuItem
+                    onClick={() => setActiveTab("settings")}
                     className="text-slate-200 focus:bg-slate-800 focus:text-white cursor-pointer"
                   >
                     <Settings className="mr-2 h-4 w-4" />
                     <span>Settings</span>
                   </DropdownMenuItem>
                   <DropdownMenuSeparator className="bg-slate-800" />
-                  <Link href="/auth/login">
+                  <div onClick={handleLogout} className="w-full text-left">
                     <DropdownMenuItem className="text-red-400 focus:bg-red-900/20 focus:text-red-300 cursor-pointer">
                       <LogOut className="mr-2 h-4 w-4" />
                       <span>Log out</span>
                     </DropdownMenuItem>
-                  </Link>
+                  </div>
                 </DropdownMenuContent>
               </DropdownMenu>
             </div>
@@ -244,10 +308,10 @@ export function UserDashboardLayout({ children }: { children: React.ReactNode })
                 <div className="mb-6">
                   <div className="flex items-center px-2 mb-6">
                     <div className="w-8 h-8 rounded-full bg-gradient-to-br from-violet-500 to-indigo-500 flex items-center justify-center text-white text-sm font-bold">
-                      JD
+                      {avatar}
                     </div>
                     <div className="ml-3">
-                      <p className="text-sm font-medium text-slate-200">John Doe</p>
+                      <p className="text-sm font-medium text-slate-200">{name}</p>
                       <p className="text-xs text-slate-400">Citizen</p>
                     </div>
                   </div>
@@ -280,16 +344,15 @@ export function UserDashboardLayout({ children }: { children: React.ReactNode })
 
             {/* Fixed logout section - always at bottom and visible */}
             <div className="p-4 border-t border-slate-800/60 bg-slate-900/80 backdrop-blur-sm">
-              <Link href="/auth/login">
-                <Button
-                  variant="ghost"
-                  className="w-full justify-start group relative overflow-hidden text-red-400 hover:text-red-300 hover:bg-red-900/20 truncate"
-                >
-                  <LogOut className="min-w-[16px] mr-2 h-4 w-4" />
-                  <span className="truncate">Logout</span>
-                  <span className="absolute inset-0 h-full w-full scale-0 rounded-md bg-red-500/10 transition-all duration-300 group-hover:scale-100 group-hover:opacity-100" />
-                </Button>
-              </Link>
+              <Button
+                variant="ghost"
+                className="w-full justify-start group relative overflow-hidden text-red-400 hover:text-red-300 hover:bg-red-900/20 truncate"
+                onClick={handleLogout}
+              >
+                <LogOut className="min-w-[16px] mr-2 h-4 w-4" />
+                <span className="truncate">Logout</span>
+                <span className="absolute inset-0 h-full w-full scale-0 rounded-md bg-red-500/10 transition-all duration-300 group-hover:scale-100 group-hover:opacity-100" />
+              </Button>
             </div>
           </div>
         </aside>
@@ -304,8 +367,8 @@ export function UserDashboardLayout({ children }: { children: React.ReactNode })
               transition={{ duration: 0.3 }}
               className="text-sm text-slate-400 flex items-center gap-1.5"
             >
-              <button 
-                onClick={() => setActiveTab("dashboard")} 
+              <button
+                onClick={() => setActiveTab("dashboard")}
                 className="hover:text-violet-300 transition-colors flex items-center"
               >
                 <LayoutDashboard className="h-3.5 w-3.5 mr-1.5" />
@@ -344,17 +407,17 @@ export function UserDashboardLayout({ children }: { children: React.ReactNode })
             <div className="relative rounded-xl bg-slate-900/50 backdrop-blur-sm border border-slate-800/60 shadow-lg overflow-hidden">
               {/* Top decorative gradient line */}
               <div className="absolute top-0 inset-x-0 h-px bg-gradient-to-r from-transparent via-violet-500/40 to-transparent"></div>
-              
+
               {/* Content with padding */}
               <div className="w-full">
                 {renderActiveContent()}
               </div>
-              
+
               {/* Bottom decorative gradient line */}
               <div className="absolute bottom-0 inset-x-0 h-px bg-gradient-to-r from-transparent via-indigo-500/40 to-transparent"></div>
             </div>
           </motion.div>
-          
+
           {/* Footer */}
           <footer className="mt-8 text-center text-xs text-slate-500 py-4">
             <p>© 2025 Petition System. All rights reserved.</p>

@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState, useEffect } from "react"
+import React, { useState, useEffect, useMemo } from "react"
 import { usePathname } from "next/navigation"
 import Link from "next/link"
 import { motion } from "framer-motion"
@@ -17,6 +17,9 @@ import DashboardContent from "../../components/sections/department-admin/dashboa
 import StaffContent from "../../components/sections/department-admin/staff-content"
 import PetitionsContent from "../../components/sections/department-admin/petitions-content"
 import { SettingsContent } from "../sections/settings/settings-content"
+import { useRouter } from "next/navigation"
+import { useToast } from "@/hooks/use-toast"
+import callAPI from "@/app/utils/apiCaller"
 
 // Navigation items data for cleaner code
 const navItems = [
@@ -26,11 +29,79 @@ const navItems = [
   { id: "settings", label: "Settings", icon: Settings, isPro: false },
 ]
 
-export function DepartmentAdminLayout({ children }: { children: React.ReactNode }) {
+export function DepartmentAdminLayout() {
   const [isSidebarOpen, setSidebarOpen] = useState(false);
   const [isDarkMode, setIsDarkMode] = useState(true);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [activeTab, setActiveTab] = useState("dashboard");
+  const [petitions, setPetitions] = useState([]);
+  const [name, setName] = useState("");
+  const [email, setEmail] = useState("");
+  const [avatar, setAvatar] = useState("");
+
+  const router = useRouter();
+  const { toast } = useToast();
+
+  useEffect(() => {
+    async function checkAuthStatus() {
+      try {
+        const response = await callAPI('/api/auth/me', 'GET');
+        if (response && response.user && response.user.role !== 2) {
+          toast({
+            title: "Unauthorized",
+            description: "You do not have permission to access this page",
+            variant: "destructive",
+          });
+          router.push('/auth/login');
+        }
+        if (response && response.user) {
+          setName(response.user.name);
+          setEmail(response.user.email);
+          setAvatar(response.user.name[0].toUpperCase());
+        } else {
+          toast({
+            title: "Authentication error",
+            description: "Please login to continue",
+            variant: "destructive",
+          });
+          router.push('/auth/login');
+        }
+      } catch (error) {
+        console.log("Authentication error:", error);
+        toast({
+          title: "Authentication error",
+          description: "Please login to continue",
+          variant: "destructive",
+        });
+        router.push('/auth/login');
+      }
+    }
+
+    checkAuthStatus();
+  }, [router, toast])
+
+  useEffect(() => {
+    const fetchPetitions = async () => {
+      try {
+        let originalPetitions = await callAPI('/api/petitions', 'GET');
+        console.log("Fetched petitions:", originalPetitions);
+        if (originalPetitions && originalPetitions.success) {
+          setPetitions(originalPetitions.data);
+        } else {
+          setPetitions([]);
+        }
+      } catch (error) {
+        console.error("Error fetching petitions:", error);
+        setPetitions([]);
+      }
+    };
+    
+    // Only fetch petitions if user is authenticated (email exists)
+    if (email) {
+      fetchPetitions();
+    }
+  }, [email]); // Add email as dependency to trigger fetch when user is authenticated
+
   
   const pathname = usePathname();
 
@@ -72,23 +143,21 @@ export function DepartmentAdminLayout({ children }: { children: React.ReactNode 
     };
   }, [isSidebarOpen]);
   
-  // Function to render the active tab content
-  const renderActiveContent = () => {
+  // Function to render the active tab content - memoized to prevent unnecessary re-renders
+  const activeContent = useMemo(() => {
     switch (activeTab) {
       case "dashboard":
-        return <DashboardContent />;
+        return <DashboardContent petitions={petitions} />;
       case "staff":
         return <StaffContent />;
       case "petitions":
-        // We could create a PetitionsContent component in the future
-        return <PetitionsContent />;
+        return <PetitionsContent petitions={petitions} />;
       case "settings":
-        // We could create a SettingsContent component in the future
         return <SettingsContent />;
       default:
-        return <DashboardContent />;
+        return <DashboardContent petitions={petitions} />;
     }
-  };
+  }, [activeTab, petitions]); // Added petitions as a dependency since it's used in the content
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 flex flex-col text-slate-200">
@@ -326,7 +395,7 @@ export function DepartmentAdminLayout({ children }: { children: React.ReactNode 
 
               {/* Content with padding */}
               <div className="w-full">
-                {renderActiveContent()}
+                {activeContent}
               </div>
 
               {/* Bottom decorative gradient line */}
