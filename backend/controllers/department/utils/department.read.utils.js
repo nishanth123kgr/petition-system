@@ -32,3 +32,20 @@ export const getDepartmentIdFromAdminId = async (adminId) => {
     throw new Error(error.message);
   }
 }
+
+export const getDepartmentNameFromId = async (departmentId) => {
+  try {
+    const { data, error } = await supabaseClient
+      .from('departments')
+      .select('name')
+      .eq('id', departmentId)
+      .single();
+
+    if (error) throw error;
+
+    return data.name;
+  } catch (error) {
+    console.log(error);
+    throw new Error(error.message);
+  }
+}

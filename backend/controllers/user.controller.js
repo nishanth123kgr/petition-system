@@ -12,13 +12,14 @@ export const getUsers = async (req, res) => {
   }
 };
 
-export const getUserById = async (req, res) => {
-  const { userId } = req.params;
+export const getUserById = async (userId) => {
   try {
-    // Logic to get user by ID
-    res.json({ user: {} });
+    
+    const { data, error } = await supabaseClient.from('users').select('*').eq('id', userId).single();
+    if (error) throw error;
+    return data;
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    throw new Error(error.message);
   }
 };
 

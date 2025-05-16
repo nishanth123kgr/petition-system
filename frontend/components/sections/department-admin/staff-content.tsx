@@ -10,8 +10,11 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
-import { Search, Plus, MoreHorizontal, Mail, Phone, UserPlus } from 'lucide-react'
+import { Search, Plus, MoreHorizontal, Mail, Phone, UserPlus, Loader2 } from 'lucide-react'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
+import callAPI from '@/app/utils/apiCaller'
+import { showSuccessToast, showErrorToast } from '@/app/utils/toastUtils'
+
 
 // Sample staff data for demonstration
 const mockStaffData = [
@@ -19,82 +22,58 @@ const mockStaffData = [
     id: '1',
     name: 'John Smith',
     email: 'john.smith@infrastructure.gov',
-    role: 'Senior Analyst',
-    department: 'Engineering',
-    status: 'active',
-    joinedOn: '2023-05-15',
-    avatar: '/placeholder-user.jpg',
   },
   {
     id: '2',
     name: 'Sarah Johnson',
     email: 'sarah.johnson@infrastructure.gov',
-    role: 'Project Manager',
-    department: 'Planning',
-    status: 'active',
-    joinedOn: '2023-02-10',
-    avatar: '',
   },
   {
     id: '3',
     name: 'Michael Chen',
     email: 'michael.chen@infrastructure.gov',
-    role: 'Technical Officer',
-    department: 'IT Support',
-    status: 'active',
-    joinedOn: '2022-11-22',
-    avatar: '/placeholder-user.jpg',
   },
   {
     id: '4',
     name: 'Emily Rodriguez',
     email: 'emily.rodriguez@infrastructure.gov',
-    role: 'Administrative Assistant',
-    department: 'Admin',
-    status: 'on-leave',
-    joinedOn: '2024-01-08',
-    avatar: '',
   },
   {
     id: '5',
     name: 'David Patel',
     email: 'david.patel@infrastructure.gov',
-    role: 'Civil Engineer',
-    department: 'Engineering',
-    status: 'active',
-    joinedOn: '2023-09-30',
-    avatar: '/placeholder-user.jpg',
   },
 ]
 
-export default function StaffContent() {
-  const [staff, setStaff] = useState(mockStaffData)
+export default function StaffContent({staff=[], setStaff}: {staff: any[]; setStaff: (staff: any) => void}) {
   const [searchTerm, setSearchTerm] = useState('')
   const [isAddStaffOpen, setIsAddStaffOpen] = useState(false)
 
   // Filter staff based on search term
   const filteredStaff = staff.filter(member =>
     member.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    member.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    member.role.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    member.department.toLowerCase().includes(searchTerm.toLowerCase())
-  )
-
-  const handleAddStaff = (formData: any) => {
+    member.email.toLowerCase().includes(searchTerm.toLowerCase()))
+  const handleAddStaff = async (formData: any) => {
     // In a real application, you would send this data to an API
-    const newStaff = {
-      id: (staff.length + 1).toString(),
-      name: formData.name,
-      email: formData.email,
-      role: formData.role,
-      department: formData.department,
-      status: 'active',
-      joinedOn: new Date().toISOString().split('T')[0],
-      avatar: '',
-    }
+    const result = await callAPI('/api/staff', 'POST', {name: formData.name, email: formData.email} as any)
+    if (result.error) {
+      console.error('Error adding staff:', result.error)
+      showErrorToast('Staff Addition Failed', result.error)
+      return
+    } 
 
+    console.log('Staff added successfully:', result);
+    
+
+    const newStaff = {
+      id: result.staff.id,
+      name: formData.name,
+      email: formData.email
+    }
+    
     setStaff([...staff, newStaff])
     setIsAddStaffOpen(false)
+    showSuccessToast('Staff Added', `${formData.name} has been successfully added to your department.`)
   }
 
   return (
@@ -153,9 +132,8 @@ export default function StaffContent() {
                     <TableCell className="font-medium">
                       <div className="flex items-center gap-3">
                         <Avatar>
-                          <AvatarImage src={member.avatar} alt={member.name} />
                           <AvatarFallback className="bg-indigo-900/60 text-indigo-200">
-                            {member.name.split(' ').map(n => n[0]).join('')}
+                            {member.name.split(' ').map((n: any[]) => n[0]).join('')}
                           </AvatarFallback>
                         </Avatar>
                         <div>
@@ -164,9 +142,9 @@ export default function StaffContent() {
                         </div>
                       </div>
                     </TableCell>
-                    <TableCell className="text-slate-300 text-center">12</TableCell>
-                    <TableCell className="text-slate-300 text-center">5</TableCell>
-                    <TableCell className="text-slate-300 text-center">7</TableCell>
+                    <TableCell className="text-slate-300 text-center">{member.assignedCount ? member.assignedCount : 0}</TableCell>
+                    <TableCell className="text-slate-300 text-center">{member.inProgressCount ? member.inProgressCount : 0}</TableCell>
+                    <TableCell className="text-slate-300 text-center">{member.completedCount ? member.completedCount : 0}</TableCell>
                   </TableRow>
                 ))}
 
@@ -197,6 +175,7 @@ function AddStaffDialog({ open, setOpen, onSubmit }: {
     role: '',
     department: '',
   })
+  const [isLoading, setIsLoading] = useState(false)
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target
@@ -207,9 +186,11 @@ function AddStaffDialog({ open, setOpen, onSubmit }: {
     setFormData(prev => ({ ...prev, [name]: value }))
   }
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    onSubmit(formData)
+    setIsLoading(true)
+    await onSubmit(formData)
+    setIsLoading(false)
     setFormData({ name: '', email: '', role: '', department: '' })
   }
 
@@ -287,9 +268,11 @@ function AddStaffDialog({ open, setOpen, onSubmit }: {
               <Button
                 type="submit"
                 className="bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-500 hover:to-indigo-500 text-white shadow-md hover:shadow-lg hover:shadow-violet-900/20 transition-all duration-300"
+                disabled={isLoading}
               >
-                <UserPlus className="mr-2 h-4 w-4" />
-                Add Staff Member
+                {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                {!isLoading && <UserPlus className="mr-2 h-4 w-4" />}
+                {isLoading ? 'Adding...' : 'Add Staff Member'}
               </Button>
             </DialogFooter>
           </div>

@@ -2,6 +2,7 @@ import { generateToken, setTokenCookie, verifyToken } from '../utils/jwt/jwtUtil
 import srpServer from 'secure-remote-password/server.js';
 import supabaseClient from '../middleware/supabase.middleware.js';
 import { getUserByEmail, createUser, getDepartmentIdFromAdminId } from './user.controller.js';
+import { getDepartmentNameFromId } from './department/utils/department.read.utils.js';
 
 // Auth Controller
 export const register = async (req, res) => {
@@ -149,12 +150,14 @@ export const getCurrentUser = async (req, res) => {
         if (!userData) {
             return res.json({ error: 'User not found' });
         }
+
         
         // Set user details in request object, excluding sensitive information
         req.user = {
             name: userData.name,
             email: userData.email,
             role: userData.role,
+            departmentName: req.user.departmentId ? await getDepartmentNameFromId(req.user.departmentId) : null,
             // Add other non-sensitive fields as needed
         };
         res.json({ user: req.user });

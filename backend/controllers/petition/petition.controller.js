@@ -2,6 +2,8 @@ import supabaseClient from '../../middleware/supabase.middleware.js';
 import { getPetitionsForDepartment, getPetitionsForStaff, getPetitionsForSuperAdmin, getPetitionsForUser } from './utils/petition.read.utils.js';
 import { getDepartmentNames } from '../department/utils/department.read.utils.js';
 import { classifyPetition } from './utils/petition.create.utils.js';
+import { sendMail } from '../../utils/mailer/index.js';
+import { getUserById } from '../user.controller.js';
 
 
 export const createPetition = async (req, res) => {
@@ -89,9 +91,17 @@ export const updatePetition = async (req, res) => {
     }
 
     console.log(data);
+
+    const user = await getUserById(data[0].submitted_by);
+
+    await sendMail(user.email, data[0], "petitionUpdate");
     
     res.json({ message: 'Petition updated successfully' });
+
+    
   } catch (error) {
+    console.log(error);
+    
     res.status(500).json({ error: error.message });
   }
 };

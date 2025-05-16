@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { motion } from "framer-motion"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
@@ -11,6 +11,8 @@ import { Avatar } from "@/components/ui/avatar"
 import { User, Calendar, Tag, MessageSquare, ThumbsUp, Share2, Flag, ChevronLeft, Clock, AlertCircle } from "lucide-react"
 import callAPI from "@/app/utils/apiCaller"
 import { useToast } from "@/hooks/use-toast"
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
+import { DepartmentPetitionCard } from "./DepartmentPetitionCard"
 
 // Mock data for department petitions
 const mockPetitions = [
@@ -343,17 +345,35 @@ interface PetitionsContentProps {
         severity: string,
         submitted_by: string
         assigned_to: string
-    }>
+    }>,
+    staffs?: Array<{
+        id: string
+        name: string
+        email: string
+        department: string
+        assignedCount: number
+        inProgressCount: number
+        completedCount: number
+    }>,
+    setStaff?: (staff: any) => void
 }
 
-export default function PetitionsContent({ petitions = [] }: PetitionsContentProps) {
+export default function PetitionsContent({ petitions = [], staffs = [], setStaff }: PetitionsContentProps) {
     const [searchTerm, setSearchTerm] = useState("")
     const [statusFilter, setStatusFilter] = useState("all")
     const [selectedPetition, setSelectedPetition] = useState<any>(null)
     const [hasSupportedPetition, setHasSupportedPetition] = useState(false)
     const [loadingStatusUpdate, setLoadingStatusUpdate] = useState<number | null>(null)
+    const [isAssignDialogOpen, setIsAssignDialogOpen] = useState(false)
+    const [assigningPetition, setAssigningPetition] = useState<any>(null)
+    const [petitionsData, setPetitionsData] = useState(petitions)
 
     const { toast } = useToast()
+
+    // Update petitionsData when petitions prop changes
+    useEffect(() => {
+        setPetitionsData(petitions);
+    }, [petitions]);
 
     // Handle petition status updates
     const handleUpdateStatus = async (id: number, status: string) => {
@@ -372,16 +392,64 @@ export default function PetitionsContent({ petitions = [] }: PetitionsContentPro
             return;
         }
 
-        const petitionToUpdate = petitions?.find(petition => petition?.id === id);
-        if (petitionToUpdate) {
-            petitionToUpdate.status = status;
-        }
+        // Update local state
+        setPetitionsData(prevPetitions => 
+            prevPetitions.map(petition => 
+                petition.id === id ? { ...petition, status } : petition
+            )
+        );
 
         toast({ title: "Success", description: `Petition status updated to ${status}.`, variant: "success" });
     }
 
+    // Handle petition due date updates
+    const handleUpdateDueDate = async (id: number, dueDate: Date) => {
+        // Set loading state for this specific petition
+        setLoadingStatusUpdate(id);
+        
+        try {
+            // Fix timezone issue by creating a new date with the same day/month/year
+            // but with time set to noon (to avoid timezone issues)
+            const adjustedDate = new Date(
+                dueDate.getFullYear(),
+                dueDate.getMonth(),
+                dueDate.getDate(),
+                12, 0, 0
+            );
+            
+            // Format the due date as ISO string for the database
+            const due_date = adjustedDate.toISOString();
+            console.log(`Updating petition ${id} due date to: ${due_date}`);
+            
+            // Call the API to update the due date
+            const result = await callAPI(`/api/petitions/${id}`, "PUT", { 
+                updateMap: { due_date } 
+            } as any);
+
+            if (result.error) {
+                toast({ title: "Error", description: "Failed to update due date.", variant: "destructive" });
+                return;
+            }
+
+            // Update local state
+            setPetitionsData(prevPetitions => 
+                prevPetitions.map(petition => 
+                    petition.id === id ? { ...petition, due_date } : petition
+                )
+            );
+
+            toast({ title: "Success", description: `Due date updated successfully.`, variant: "success" });
+        } catch (error) {
+            console.error("Error updating due date:", error);
+            toast({ title: "Error", description: "Failed to update due date.", variant: "destructive" });
+        } finally {
+            // Clear loading state
+            setLoadingStatusUpdate(null);
+        }
+    }
+
     // Filter petitions based on search term and status filter
-    const filteredPetitions = petitions.filter(petition => {
+    const filteredPetitions = petitionsData.filter(petition => {
         const matchesSearch = petition.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
             petition.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
             petition.submitted_by.toLowerCase().includes(searchTerm.toLowerCase());
@@ -395,7 +463,7 @@ export default function PetitionsContent({ petitions = [] }: PetitionsContentPro
     const handleViewDetails = (petitionId: number) => {
         // In a real app, you would fetch the petition details from the API
         // For now, we'll use our mock data
-        setSelectedPetition(petitions.find(p => p.id === petitionId) || mockDetailedPetition);
+        setSelectedPetition(petitionsData.find(p => p.id === petitionId) || mockDetailedPetition);
     };
 
     const handleBackToList = () => {
@@ -411,6 +479,69 @@ export default function PetitionsContent({ petitions = [] }: PetitionsContentPro
             supportCount: prev.supportCount + 1
         }));
         setHasSupportedPetition(true);
+    };
+
+    const handleAssignStaff = async (petitionId: number, staffId: string) => {
+        // Set loading state for this specific petition
+        setLoadingStatusUpdate(petitionId);
+        
+        try {
+            // Call the API to assign the staff member to the petition
+            const result = await callAPI(`/api/staff/${staffId}/petitions/assign`, 'POST', { petitionId } as any);
+
+            if (result.success) {
+                toast({ 
+                    title: "Success", 
+                    description: result.message || `Staff assigned to petition successfully.`, 
+                    variant: "success" 
+                });
+                
+                // Fetch the staff name from the response if available
+                const staffName = staffs.find(staff=>staff.id===staffId)?.name || "Staff Member";
+                
+                // Update the local petition data with the newly assigned staff
+                setPetitionsData(prevPetitions => 
+                    prevPetitions.map(petition => {
+                        if(petition.id === petitionId )
+                        {
+                            // Only call setStaff if it exists
+                            if (setStaff) {
+                                setStaff((prevStaffs: any[]) =>
+                                    prevStaffs.map(staff => {
+                                        if (staff.id === staffId) {
+                                            return { ...staff, assignedCount: staff.assignedCount + 1, inProgressCount: petition.status === "In Progress" ? staff.inProgressCount + 1 : staff.inProgressCount, completedCount: petition.status === "Completed" ? staff.completedCount + 1 : staff.completedCount };
+                                        }
+                                        return staff;
+                                    })
+                                );
+                            }
+                            
+                            return { ...petition, assigned_to: staffName };
+                        }
+                            return petition;
+                    })
+                );
+
+            } else {
+                toast({ 
+                    title: "Error", 
+                    description: result.message || "Failed to assign staff to petition.", 
+                    variant: "destructive" 
+                });
+            }
+        } catch (error) {
+            console.error("Error assigning staff:", error);
+            toast({ 
+                title: "Error", 
+                description: "An unexpected error occurred.", 
+                variant: "destructive" 
+            });
+        } finally {
+            // Clear loading state
+            setLoadingStatusUpdate(null);
+            setIsAssignDialogOpen(false);
+            setAssigningPetition(null);
+        }
     };
 
     return (
@@ -468,6 +599,11 @@ export default function PetitionsContent({ petitions = [] }: PetitionsContentPro
                                         onUpdateStatus={handleUpdateStatus}
                                         onViewDetails={handleViewDetails}
                                         isLoading={loadingStatusUpdate === petition.id}
+                                        onAssignStaff={() => {
+                                            setAssigningPetition(petition);
+                                            setIsAssignDialogOpen(true);
+                                        }}
+                                        onUpdateDueDate={handleUpdateDueDate}
                                     />
                                 </motion.div>
                             ))
@@ -493,126 +629,22 @@ export default function PetitionsContent({ petitions = [] }: PetitionsContentPro
                     onSupport={handleSupport}
                 />
             )}
+
+            {assigningPetition && (
+                <AssignStaffDialog
+                    open={isAssignDialogOpen}
+                    setOpen={setIsAssignDialogOpen}
+                    petition={assigningPetition}
+                    onAssignStaff={handleAssignStaff}
+                    isLoading={loadingStatusUpdate === assigningPetition.id}
+                    staffs={staffs}
+                />
+            )}
         </div>
     )
 }
 
-function DepartmentPetitionCard({
-    petition,
-    onUpdateStatus,
-    onViewDetails,
-    isLoading
-}: {
-    petition: any
-    onUpdateStatus: (id: number, status: string) => void
-    onViewDetails: (id: number) => void
-    isLoading: boolean
-}) {
-    const handleReassignStaff = () => {
-        // Implementation for staff reassignment functionality
-        alert(`Reassigning petition: ${petition.id} - ${petition.title}`)
-        // In a real implementation, this would open a modal for staff reassignment
-    }
-
-    return (
-        <Card className="bg-slate-900/70 backdrop-blur-sm border-slate-800/50 hover:border-violet-500/30 transition-all duration-300 hover:shadow-[0_0_15px_rgba(139,92,246,0.1)] overflow-hidden">
-            <div className="absolute inset-0 bg-gradient-to-br from-violet-600/5 to-indigo-600/5 z-0" />
-
-            <CardHeader className="relative z-10">
-                <div className="flex flex-col sm:flex-row justify-between items-start gap-2">
-                    <div>
-                        <CardTitle className="text-slate-100">{petition.title}</CardTitle>
-                        <CardDescription className="text-slate-400 mt-2 flex items-center gap-2">
-                            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-slate-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                                <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
-                                <circle cx="12" cy="7" r="4"></circle>
-                            </svg> {petition.submitted_by}
-                            <span className="mx-2 text-slate-500">•</span>
-                            <span className="flex items-center">
-                                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-violet-400 mr-1" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                                    <path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
-                                    <circle cx="8.5" cy="7" r="4"></circle>
-                                    <line x1="20" y1="8" x2="20" y2="14"></line>
-                                    <line x1="23" y1="11" x2="17" y2="11"></line>
-                                </svg>
-                                {petition.assigned_to ? (
-                                    <span className="text-violet-300">Assigned to: <span className="font-medium">{petition.assigned_to}</span></span>
-                                ) : (
-                                    <span className="ml-2">Not Assigned</span>
-                                )}
-                            </span>
-                        </CardDescription>
-                    </div>
-                    <div className="flex flex-wrap gap-2">
-                        <PriorityBadge priority={petition.severity} />
-                        <StatusBadge status={petition.status} />
-                    </div>
-                </div>
-            </CardHeader>
-            <CardContent className="relative z-10 text-slate-300">
-                <p>{petition.description}</p>
-            </CardContent>
-            <CardFooter className="relative z-10 flex flex-wrap justify-between gap-2">
-                <div>
-                    <Select
-                        defaultValue={petition.status.toLowerCase().replace(" ", "-")}
-                        onValueChange={(value) => {
-                            const statusMap: Record<string, string> = {
-                                new: "New",
-                                "in-progress": "In Progress",
-                                completed: "Completed",
-                                rejected: "Rejected",
-                            }
-                            onUpdateStatus(petition.id, statusMap[value])
-                        }}
-                        disabled={isLoading}
-                    >
-                        <SelectTrigger className="w-[180px] bg-slate-800/70 border-slate-700/50 text-slate-200 focus:ring-violet-500/70 focus:ring-offset-slate-900">
-                            {isLoading ? (
-                                <div className="flex items-center justify-center">
-                                    <svg className="animate-spin h-4 w-4 text-violet-400 mr-2" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                                    </svg>
-                                    <span>Updating...</span>
-                                </div>
-                            ) : (
-                                <SelectValue placeholder="Update status" />
-                            )}
-                        </SelectTrigger>
-                        <SelectContent className="bg-slate-800 border-slate-700 text-slate-200">
-                            <SelectItem value="new">New</SelectItem>
-                            <SelectItem value="in-progress">In Progress</SelectItem>
-                            <SelectItem value="completed">Completed</SelectItem>
-                            <SelectItem value="rejected">Rejected</SelectItem>
-                        </SelectContent>
-                    </Select>
-                </div>
-                <div className="flex gap-2">
-                    <Button
-                        variant="outline"
-                        className="bg-transparent border-violet-500/50 text-violet-300 hover:bg-violet-600/10 hover:border-violet-400 hover:text-white transition-all duration-300"
-                        onClick={handleReassignStaff}
-                        disabled={isLoading}
-                        aria-label={`Reassign staff for petition: ${petition.title}`}
-                    >
-                        {petition.assigned_to ? "Reassign Staff" : "Assign Staff"}
-                    </Button>
-                    <Button
-                        className="relative overflow-hidden group bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-500 hover:to-indigo-500 text-white shadow-lg shadow-violet-900/30 transition-all duration-300"
-                        onClick={() => onViewDetails(petition.id)}
-                        disabled={isLoading}
-                    >
-                        <span className="relative z-10">View Details</span>
-                        <span className="absolute inset-0 h-full w-full scale-0 rounded-full bg-white/10 transition-all duration-300 group-hover:scale-100 group-hover:opacity-100" />
-                    </Button>
-                </div>
-            </CardFooter>
-        </Card>
-    )
-}
-
-function StatusBadge({ status }: { status: string }) {
+export function StatusBadge({ status }: { status: string }) {
     let bgColor = "bg-slate-700"
     let textColor = "text-slate-200"
 
@@ -640,24 +672,178 @@ function StatusBadge({ status }: { status: string }) {
     </span>)
 }
 
-function PriorityBadge({ priority }: { priority: string }) {
-    let className = "bg-slate-700 text-slate-200"
 
-    switch (priority) {
-        case "High":
-            className = "bg-red-900/60 text-red-200"
-            break
-        case "Medium":
-            className = "bg-amber-900/60 text-amber-200"
-            break
-        case "Low":
-            className = "bg-green-900/60 text-green-200"
-            break
+
+// Interface for staff member
+interface StaffMember {
+  id: string
+  name: string
+  email: string
+  assignedCount?: number
+  inProgressCount?: number
+  completedCount?: number
+}
+
+// AssignStaffDialog component for assigning staff to petitions
+function AssignStaffDialog({ 
+  open, 
+  setOpen, 
+  petition,
+  onAssignStaff,
+  isLoading,
+  staffs = []
+}: { 
+  open: boolean
+  setOpen: (open: boolean) => void
+  petition: any
+  onAssignStaff: (petitionId: number, staffId: string) => void
+  isLoading: boolean
+  staffs?: StaffMember[]
+}) {
+  const [selectedStaffId, setSelectedStaffId] = useState("")
+  const [staffList, setStaffList] = useState<StaffMember[]>(staffs)
+  const [searchTerm, setSearchTerm] = useState("")
+  const [isLoadingStaff, setIsLoadingStaff] = useState(false)
+  const { toast } = useToast()
+  
+  // Fetch staff list when dialog opens
+//   const fetchStaff = async () => {
+//     try {
+//       setIsLoadingStaff(true)
+//       const response = await callAPI('/api/staff', 'GET')
+//       if (response && !response.error) {
+//         setStaffList(response)
+//       } else {
+//         toast({
+//           title: "Error",
+//           description: "Failed to load staff members",
+//           variant: "destructive"
+//         })
+//       }
+//     } catch (error) {
+//       console.error("Error fetching staff:", error)
+//       toast({
+//         title: "Error",
+//         description: "Failed to load staff members",
+//         variant: "destructive"
+//       })
+//     } finally {
+//       setIsLoadingStaff(false)
+//     }
+//   }
+  
+  // Call fetchStaff when dialog is opened
+//   const handleDialogOpenChange = (isOpen: boolean) => {
+//     if (isOpen) {
+//       fetchStaff()
+//     }
+//     setOpen(isOpen)
+//   }
+  
+  // Handle staff assignment
+  const handleAssign = () => {
+    if (selectedStaffId) {
+      onAssignStaff(petition.id, selectedStaffId)
+    } else {
+      toast({
+        title: "Error",
+        description: "Please select a staff member",
+        variant: "destructive"
+      })
     }
-
-    return (
-        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${className}`}>
-            {priority}
-        </span>
-    )
+  }
+  
+  // Filter staff based on search term
+  const filteredStaff = staffList.filter(staff => 
+    (staff.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    staff.email.toLowerCase().includes(searchTerm.toLowerCase())) && petition.assigned_to !== staff.name
+  )
+  
+  return (
+    <Dialog open={open} onOpenChange={()=>console.log("Dialog Opened")}>
+      <DialogContent className="bg-slate-900 border-slate-800 text-slate-200 sm:max-w-[525px]">
+        <div className="absolute top-0 left-0 right-0 h-1.5 bg-gradient-to-r from-violet-600 to-indigo-600"></div>
+        <DialogHeader className="space-y-3 pb-2">
+          <DialogTitle className="text-xl font-semibold">Assign Staff Member</DialogTitle>
+          <DialogDescription className="text-slate-400">
+            Assign a staff member to handle petition: <span className="text-indigo-300 font-medium">{petition?.title}</span>
+          </DialogDescription>
+        </DialogHeader>
+        
+        <div className="my-2">
+          <Input
+            placeholder="Search staff members..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="bg-slate-800/60 border-slate-700/50 text-slate-200 focus-visible:ring-violet-500"
+          />
+        </div>
+        
+        <div className="max-h-[240px] overflow-y-auto pr-1 space-y-2">
+          {isLoadingStaff ? (
+            <div className="flex justify-center items-center py-8">
+              <div className="animate-spin rounded-full h-6 w-6 border-t-2 border-b-2 border-violet-500"></div>
+            </div>
+          ) : filteredStaff.length > 0 ? (
+            filteredStaff.map(staff => (
+              <div 
+                key={staff.id}
+                className={`p-3 rounded-md border cursor-pointer transition-all ${
+                  selectedStaffId === staff.id 
+                    ? "bg-violet-900/30 border-violet-500/50" 
+                    : "bg-slate-800/50 border-slate-700/50 hover:border-violet-500/30"
+                }`}
+                onClick={() => setSelectedStaffId(staff.id)}
+              >
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="h-10 w-10 rounded-full bg-indigo-900/60 flex items-center justify-center text-indigo-200 font-medium">
+                      {staff.name.split(' ').map(n => n[0]).join('')}
+                    </div>
+                    <div>
+                      <div className="font-medium text-slate-200">{staff.name}</div>
+                      <div className="text-xs text-slate-400">{staff.email}</div>
+                    </div>
+                  </div>
+                  
+                  {staff.assignedCount !== undefined && (
+                    <div className="text-right">
+                      <div className="text-sm text-slate-300">{staff.assignedCount} assigned</div>
+                      <div className="text-xs text-slate-400">{staff.inProgressCount} in progress</div>
+                    </div>
+                  )}
+                </div>
+              </div>
+            ))
+          ) : (
+            <div className="text-center py-8 text-slate-400">
+              No staff members found
+            </div>
+          )}
+        </div>
+        
+        <DialogFooter className="pt-3 border-t border-slate-800 mt-4">
+          <Button
+            variant="outline"
+            onClick={() => setOpen(false)}
+            className="bg-transparent border-violet-500/50 text-violet-300 hover:bg-violet-600/10 hover:border-violet-400 hover:text-white transition-all duration-300"
+          >
+            Cancel
+          </Button>
+          <Button
+            onClick={handleAssign}
+            disabled={!selectedStaffId || isLoading}
+            className="bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-500 hover:to-indigo-500 text-white shadow-md hover:shadow-lg hover:shadow-violet-900/20 transition-all duration-300"
+          >
+            {isLoading ? (
+              <>
+                <div className="animate-spin rounded-full h-4 w-4 border-t-2 border-b-2 border-white mr-2"></div>
+                Assigning...
+              </>
+            ) : "Assign Staff"}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  )
 }

@@ -15,11 +15,12 @@ import { Badge } from "../../components/ui/badge"
 import { Input } from "../../components/ui/input"
 import DashboardContent from "../../components/sections/department-admin/dashboard-content"
 import StaffContent from "../../components/sections/department-admin/staff-content"
-import PetitionsContent from "../../components/sections/department-admin/petitions-content"
+import PetitionsContent from "../sections/department-admin/petitions/petitions-content"
 import { SettingsContent } from "../sections/settings/settings-content"
 import { useRouter } from "next/navigation"
 import { useToast } from "@/hooks/use-toast"
 import callAPI from "@/app/utils/apiCaller"
+import { set } from "date-fns"
 
 // Navigation items data for cleaner code
 const navItems = [
@@ -35,9 +36,11 @@ export function DepartmentAdminLayout() {
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [activeTab, setActiveTab] = useState("dashboard");
   const [petitions, setPetitions] = useState([]);
+  const [staffs, setStaffs] = useState([]);
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [avatar, setAvatar] = useState("");
+  const [department, setDepartment] = useState("");
 
   const router = useRouter();
   const { toast } = useToast();
@@ -58,6 +61,7 @@ export function DepartmentAdminLayout() {
           setName(response.user.name);
           setEmail(response.user.email);
           setAvatar(response.user.name[0].toUpperCase());
+          setDepartment(response.user.departmentName);
         } else {
           toast({
             title: "Authentication error",
@@ -95,15 +99,35 @@ export function DepartmentAdminLayout() {
         setPetitions([]);
       }
     };
-    
+
     // Only fetch petitions if user is authenticated (email exists)
     if (email) {
       fetchPetitions();
     }
   }, [email]); // Add email as dependency to trigger fetch when user is authenticated
 
-  
-  const pathname = usePathname();
+  useEffect(() => {
+    const fetchStaffs = async () => {
+      try {
+        let originalStaffs = await callAPI('/api/staff', 'GET');
+        console.log("Fetched staffs:", originalStaffs);
+        if (originalStaffs && originalStaffs.success) {
+          setStaffs(originalStaffs.data);
+        } else {
+          setStaffs([]);
+        }
+      } catch (error) {
+        console.error("Error fetching staffs:", error);
+        setStaffs([]);
+      }
+    };
+
+    // Only fetch staffs if user is authenticated (email exists)
+    if (email) {
+      fetchStaffs();
+    }
+  }, [email]); // Add email as dependency to trigger fetch when user is authenticated
+
 
   // Close sidebar when pressing escape key
   useEffect(() => {
@@ -142,22 +166,49 @@ export function DepartmentAdminLayout() {
       document.body.style.overflow = '';
     };
   }, [isSidebarOpen]);
-  
+
+  async function handleLogout() {
+    try {
+      const response = await callAPI('/api/auth/logout');
+      if (response && response.success) {
+        toast({
+          title: "Logged out",
+          description: "You have been logged out successfully",
+          variant: "default",
+        });
+        router.push('/auth/login');
+      } else {
+        toast({
+          title: "Logout error",
+          description: "An error occurred while logging out",
+          variant: "destructive",
+        });
+      }
+    } catch (error) {
+      console.error("Logout error:", error);
+      toast({
+        title: "Logout error",
+        description: "An error occurred while logging out",
+        variant: "destructive",
+      });
+    }
+  }
+
   // Function to render the active tab content - memoized to prevent unnecessary re-renders
   const activeContent = useMemo(() => {
     switch (activeTab) {
       case "dashboard":
-        return <DashboardContent petitions={petitions} />;
+        return <DashboardContent petitions={petitions} staffs={staffs} />;
       case "staff":
-        return <StaffContent />;
+        return <StaffContent staff={staffs} setStaff={setStaffs} />;
       case "petitions":
-        return <PetitionsContent petitions={petitions} />;
+        return <PetitionsContent petitions={petitions} staffs={staffs} />;
       case "settings":
         return <SettingsContent />;
       default:
         return <DashboardContent petitions={petitions} />;
     }
-  }, [activeTab, petitions]); // Added petitions as a dependency since it's used in the content
+  }, [activeTab, petitions, staffs]); // Added staffs as a dependency since it's used in the content
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 flex flex-col text-slate-200">
@@ -189,7 +240,7 @@ export function DepartmentAdminLayout() {
               </h1>
             </Link>
           </div>
-          
+
           <div className="flex items-center ml-auto gap-1 md:gap-3">
             {/* Create New Button */}
             <Popover>
@@ -231,36 +282,32 @@ export function DepartmentAdminLayout() {
                   <Button variant="ghost" className="relative h-9 w-9 rounded-full  border border-slate-700/50 hover:border-violet-500/50 transition-all duration-300 p-0">
                     <Avatar>
                       <AvatarImage src="/placeholder-user.jpg" alt="Department Admin" />
-                      <AvatarFallback className="bg-violet-900/60 text-violet-200">DA</AvatarFallback>
+                      <AvatarFallback className="bg-violet-900/60 text-violet-200">{avatar}</AvatarFallback>
                     </Avatar>
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent className="w-56 bg-slate-900 border-slate-800 shadow-xl shadow-slate-950/50 mt-1">
                   <div className="flex items-center gap-2 p-3">
                     <div className="bg-violet-900/60 h-10 w-10 rounded-full flex items-center justify-center text-violet-200">
-                      DA
+                      {avatar}
                     </div>
                     <div>
-                      <div className="font-medium text-sm text-slate-200">Department Admin</div>
-                      <div className="text-xs text-slate-400">admin../..infrastructure.gov</div>
+                      <div className="font-medium text-sm text-slate-200">{name}</div>
+                      <div className="text-xs text-slate-400">{email}</div>
                     </div>
                   </div>
                   <DropdownMenuSeparator className="bg-slate-800" />
-                  <DropdownMenuItem className="text-slate-200 focus:bg-slate-800 focus:text-white cursor-pointer">
-                    <User className="mr-2 h-4 w-4" />
-                    <span>Profile</span>
-                  </DropdownMenuItem>
                   <DropdownMenuItem className="text-slate-200 focus:bg-slate-800 focus:text-white cursor-pointer">
                     <Settings className="mr-2 h-4 w-4" />
                     <span>Settings</span>
                   </DropdownMenuItem>
                   <DropdownMenuSeparator className="bg-slate-800" />
-                  <Link href="/auth/login">
+                  <div onClick={handleLogout} className="w-full text-left">
                     <DropdownMenuItem className="text-red-400 focus:bg-red-900/20 focus:text-red-300 cursor-pointer">
                       <LogOut className="mr-2 h-4 w-4" />
                       <span>Log out</span>
                     </DropdownMenuItem>
-                  </Link>
+                  </div>
                 </DropdownMenuContent>
               </DropdownMenu>
             </div>
@@ -292,11 +339,11 @@ export function DepartmentAdminLayout() {
                 <div className="mb-6">
                   <div className="flex items-center px-2 mb-6">
                     <div className="w-8 h-8 rounded-full bg-gradient-to-br from-violet-500 to-indigo-500 flex items-center justify-center text-white text-sm font-bold">
-                      DA
+                      {avatar}
                     </div>
                     <div className="ml-3">
-                      <p className="text-sm font-medium text-slate-200">Department Admin</p>
-                      <p className="text-xs text-slate-400">Infrastructure</p>
+                      <p className="text-sm font-medium text-slate-200">{name}</p>
+                      <p className="text-xs text-slate-400">{department}</p>
                     </div>
                   </div>
                   <div className="h-px bg-gradient-to-r from-transparent via-slate-700/50 to-transparent mb-6"></div>
@@ -328,16 +375,15 @@ export function DepartmentAdminLayout() {
 
             {/* Fixed logout section - always at bottom and visible */}
             <div className="p-4 border-t border-slate-800/60 bg-slate-900/80 backdrop-blur-sm">
-              <Link href="/auth/login">
-                <Button
-                  variant="ghost"
-                  className="w-full justify-start group relative overflow-hidden text-red-400 hover:text-red-300 hover:bg-red-900/20 truncate"
-                >
-                  <LogOut className="min-w-[16px] mr-2 h-4 w-4" />
-                  <span className="truncate">Logout</span>
-                  <span className="absolute inset-0 h-full w-full scale-0 rounded-md bg-red-500/10 transition-all duration-300 group-hover:scale-100 group-hover:opacity-100" />
-                </Button>
-              </Link>
+              <Button
+                variant="ghost"
+                className="w-full justify-start group relative overflow-hidden text-red-400 hover:text-red-300 hover:bg-red-900/20 truncate"
+                onClick={handleLogout}
+              >
+                <LogOut className="min-w-[16px] mr-2 h-4 w-4" />
+                <span className="truncate">Logout</span>
+                <span className="absolute inset-0 h-full w-full scale-0 rounded-md bg-red-500/10 transition-all duration-300 group-hover:scale-100 group-hover:opacity-100" />
+              </Button>
             </div>
           </div>
         </aside>
@@ -352,8 +398,8 @@ export function DepartmentAdminLayout() {
               transition={{ duration: 0.3 }}
               className="text-sm text-slate-400 flex items-center gap-1.5"
             >
-              <button 
-                onClick={() => setActiveTab("dashboard")} 
+              <button
+                onClick={() => setActiveTab("dashboard")}
                 className="hover:text-violet-300 transition-colors flex items-center"
               >
                 <LayoutDashboard className="h-3.5 w-3.5 mr-1.5" />

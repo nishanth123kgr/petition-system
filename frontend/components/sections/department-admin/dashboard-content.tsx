@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, use } from "react"
 import { motion } from "framer-motion"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
@@ -87,15 +87,24 @@ interface PetitionsContentProps {
     severity: string,
     submitted_by: string
     assigned_to: string
+  }>,
+  staffs?: Array<{
+    id: number
+    name: string
+    email: string
+    department: string
+    assignedCount: number
+    inProgressCount: number
+    completedCount: number
   }>
 }
 
-export default function DashboardContent({ petitions }: PetitionsContentProps) {
+export default function DashboardContent({ petitions, staffs }: PetitionsContentProps) {
 
   const [newCount, setNewCount] = useState(0)
   const [inProgressCount, setInProgressCount] = useState(0)
   const [completedCount, setCompletedCount] = useState(0)
-  const [staffPetitionCount, setStaffPetitionCount] = useState<Array<{ name: string; petitions: number }>>([])
+  const [staffPetitionCount, setStaffPetitionCount] = useState<Array<{ name: string; Petitions: number }>>([])
 
   const statusData = [
     { name: "New", value: newCount },
@@ -134,15 +143,21 @@ export default function DashboardContent({ petitions }: PetitionsContentProps) {
     setInProgressCount(inProgressPetitions);
     setCompletedCount(completedPetitions);
 
-    const staffPetitionCountArray = Object.entries(newStaffPetitionCountObject).map(([name, petitions]) => ({
-      name,
-      petitions,
-    }));
-    setStaffPetitionCount(staffPetitionCountArray);
-
-
   }
     , [petitions]);
+
+    useEffect(() => {
+      console.log(staffs);
+      
+      const staffPetitionCountArray = staffs?.filter(staff => staff.assignedCount !== 0).map((staff) => ({
+        name: staff.name,
+        Petitions: staff.assignedCount || 0,
+      })) || [];
+      setStaffPetitionCount(staffPetitionCountArray);
+    }, [staffs]);
+
+    console.log(staffPetitionCount);
+    
 
 
   return (
