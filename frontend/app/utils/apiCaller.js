@@ -1,6 +1,26 @@
 import { showErrorToast } from "./toastUtils";
 
-const serverEndPoint = process.env.SERVER_ENDPOINT || 'http://localhost:5000';
+// Updated to allow using either an environment variable, localhost,
+// or dynamically determine the server address based on the current hostname
+const getServerEndpoint = () => {
+    if (process.env.SERVER_ENDPOINT) return process.env.SERVER_ENDPOINT;
+    
+    // If we're in a browser environment
+    if (typeof window !== 'undefined') {
+        // Get the current hostname (IP or domain name)
+        const hostname = window.location.hostname;
+        // If we're accessing from a device on the network (not localhost)
+        // use that same hostname with the backend port
+        if (hostname !== 'localhost' && hostname !== '127.0.0.1') {
+            return `http://${hostname}:5000`;
+        }
+    }
+    
+    // Default fallback to localhost
+    return 'http://localhost:5000';
+};
+
+const serverEndPoint = getServerEndpoint();
 
 const defaultHeaders = {
     'Content-Type': 'application/json',

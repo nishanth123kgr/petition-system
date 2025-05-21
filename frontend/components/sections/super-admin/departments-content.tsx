@@ -6,13 +6,20 @@ import { DepartmentCard } from "./departments/department-card"
 import { SearchAndFilterBar } from "./departments/search-and-filter-bar"
 import { EmptyState } from "./departments/empty-state"
 import { AddDepartmentDialog } from "./departments/add-department-dialog"
-import { Department, NewDepartmentData, containerVariants, itemVariants, mockDepartments } from "./departments/types"
+import { Department, NewDepartmentData, containerVariants, itemVariants } from "./departments/types"
+import callAPI from "@/app/utils/apiCaller"
+import { useToast } from "@/hooks/use-toast"
+import { Loader2 } from "lucide-react"
 
-export function DepartmentsContent({ departments }: { departments?: Department[] }) {
-  const [localDepartments, setLocalDepartments] = useState<Department[]>(departments || mockDepartments)
+export function DepartmentsContent() {
+  const [departments, setDepartments] = useState<Department[]>([])
   const [searchTerm, setSearchTerm] = useState("")
   const [statusFilter, setStatusFilter] = useState("all")
   const [openAddDialog, setOpenAddDialog] = useState(false)
+  const [loading, setLoading] = useState(true)
+  const [creating, setCreating] = useState(false)
+  const { toast } = useToast()
+  
   const [newDepartment, setNewDepartment] = useState<NewDepartmentData>({
     name: "",
     description: "",
@@ -20,18 +27,53 @@ export function DepartmentsContent({ departments }: { departments?: Department[]
     adminEmail: ""
   })
 
-  // Update local departments when prop changes
+  // Fetch departments from API
   useEffect(() => {
-    if (departments) {
-      setLocalDepartments(departments);
+    fetchDepartments()
+  }, [])
+
+  const fetchDepartments = async () => {
+    setLoading(true)
+    try {
+      const response = await callAPI('/api/departments', 'GET')
+      
+      if (response.success) {
+        // Transform the data to match our component needs
+        const formattedDepartments = response.data.map((dept: any) => ({
+          id: dept.id,
+          name: dept.name,
+          description: dept.description || "No description available",
+          adminName: dept.adminName,
+          adminEmail: dept.adminEmail,
+          staffCount: dept.staffCount || 0,
+          activePetitions: dept.petitionCount || 0,
+          status: dept.status || "Active"
+        }))
+        
+        setDepartments(formattedDepartments)
+      } else {
+        toast({
+          variant: "destructive",
+          title: "Error fetching departments",
+          description: response.message || "Failed to load departments"
+        })
+      }
+    } catch (error) {
+      toast({
+        variant: "destructive",
+        title: "Error fetching departments",
+        description: "An unexpected error occurred"
+      })
+    } finally {
+      setLoading(false)
     }
-  }, [departments]);
+  }
   
   // Filter departments based on search term and status
-  const filteredDepartments = localDepartments.filter((department) => {
+  const filteredDepartments = departments.filter((department) => {
     const matchesSearch =
       department.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      department.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (department.description?.toLowerCase().includes(searchTerm.toLowerCase()) ?? false) ||
       department.adminName.toLowerCase().includes(searchTerm.toLowerCase())
 
     const matchesStatus =
@@ -41,21 +83,55 @@ export function DepartmentsContent({ departments }: { departments?: Department[]
   })
 
   // Add new department
-  const handleAddDepartment = () => {
-    const newDept: Department = {
-      id: localDepartments.length + 1,
-      name: newDepartment.name,
-      description: newDepartment.description,
-      adminName: newDepartment.adminName,
-      adminEmail: newDepartment.adminEmail,
-      staffCount: 0,
-      activePetitions: 0,
-      status: "Active"
+  const handleAddDepartment = async () => {
+    setCreating(true)
+    try {
+      // Send the department creation request with admin details
+      const departmentResponse = await callAPI('/api/departments', 'POST', {
+        name: newDepartment.name,
+        adminName: newDepartment.adminName,
+        adminEmail: newDepartment.adminEmail
+      })
+      
+      if (departmentResponse.success) {
+        toast({
+          title: "Department created",
+          description: `${newDepartment.name} has been created successfully. An email with login credentials has been sent to ${newDepartment.adminEmail}.`
+        })
+        
+        // Refresh departments list
+        fetchDepartments()
+        
+        // Close dialog and reset form
+        setOpenAddDialog(false)
+        setNewDepartment({ name: "", description: "", adminName: "", adminEmail: "" })
+      } else {
+        toast({
+          variant: "destructive",
+          title: "Error creating department",
+          description: departmentResponse.message || "Failed to create department"
+        })
+      }
+    } catch (error) {
+      console.error("Error creating department:", error)
+      toast({
+        variant: "destructive",
+        title: "Error creating department",
+        description: error instanceof Error ? error.message : "An unexpected error occurred"
+      })
+    } finally {
+      setCreating(false)
     }
-
-    setLocalDepartments([...localDepartments, newDept])
-    setOpenAddDialog(false)
-    setNewDepartment({ name: "", description: "", adminName: "", adminEmail: "" })
+  }
+  
+  // Generate a random temporary password
+  const generateTempPassword = () => {
+    const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$%^&*"
+    let password = ""
+    for (let i = 0; i < 10; i++) {
+      password += chars.charAt(Math.floor(Math.random() * chars.length))
+    }
+    return password
   }
 
   return (
@@ -82,6 +158,7 @@ export function DepartmentsContent({ departments }: { departments?: Department[]
             newDepartment={newDepartment}
             setNewDepartment={setNewDepartment}
             handleAddDepartment={handleAddDepartment}
+            isCreating={creating}
           />
         </div>
       </motion.div>
@@ -94,13 +171,22 @@ export function DepartmentsContent({ departments }: { departments?: Department[]
           setStatusFilter={setStatusFilter}
         />
         
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-          {filteredDepartments.map((department) => (
-            <DepartmentCard key={department.id} department={department} />
-          ))}
-        </div>
-        
-        {filteredDepartments.length === 0 && <EmptyState />}
+        {loading ? (
+          <div className="flex justify-center items-center py-20">
+            <Loader2 className="h-10 w-10 animate-spin text-purple-500" />
+            <span className="ml-2 text-slate-400">Loading departments...</span>
+          </div>
+        ) : (
+          <>
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mt-4">
+              {filteredDepartments.map((department) => (
+                <DepartmentCard key={department.id} department={department} />
+              ))}
+            </div>
+            
+            {filteredDepartments.length === 0 && <EmptyState />}
+          </>
+        )}
       </motion.div>
     </motion.div>
   )

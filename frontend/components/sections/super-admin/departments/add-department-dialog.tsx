@@ -1,8 +1,8 @@
 import React from "react"
-import { Button } from "../../../../components/ui/button"
-import { Input } from "../../../../components/ui/input"
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "../../../../components/ui/dialog"
-import { Plus } from "lucide-react"
+import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
+import { Loader2, Plus } from "lucide-react"
 import { NewDepartmentData } from "./types"
 
 interface AddDepartmentDialogProps {
@@ -11,6 +11,7 @@ interface AddDepartmentDialogProps {
   newDepartment: NewDepartmentData
   setNewDepartment: (data: NewDepartmentData) => void
   handleAddDepartment: () => void
+  isCreating?: boolean
 }
 
 export const AddDepartmentDialog = ({ 
@@ -18,7 +19,8 @@ export const AddDepartmentDialog = ({
   setOpen,
   newDepartment,
   setNewDepartment,
-  handleAddDepartment
+  handleAddDepartment,
+  isCreating = false
 }: AddDepartmentDialogProps) => {
   return (
     <Dialog open={open} onOpenChange={setOpen}>
@@ -35,7 +37,7 @@ export const AddDepartmentDialog = ({
         <DialogHeader>
           <DialogTitle className="text-slate-100">Add New Department</DialogTitle>
           <DialogDescription className="text-slate-400">
-            Create a new department and assign an administrator
+            Create a new department and assign an administrator. The admin will receive login credentials via email.
           </DialogDescription>
         </DialogHeader>
         <div className="grid gap-4 py-4">
@@ -49,18 +51,7 @@ export const AddDepartmentDialog = ({
               onChange={(e) => setNewDepartment({...newDepartment, name: e.target.value})}
               className="col-span-3 bg-slate-800/70 border-slate-700/50 text-slate-200 focus-visible:ring-purple-500/70 focus-visible:border-purple-500/50 transition-all"
               placeholder="Department name"
-            />
-          </div>
-          <div className="grid grid-cols-4 items-center gap-4">
-            <label htmlFor="description" className="text-right text-slate-400 text-sm">
-              Description
-            </label>
-            <Input
-              id="description"
-              value={newDepartment.description}
-              onChange={(e) => setNewDepartment({...newDepartment, description: e.target.value})}
-              className="col-span-3 bg-slate-800/70 border-slate-700/50 text-slate-200 focus-visible:ring-purple-500/70 focus-visible:border-purple-500/50 transition-all"
-              placeholder="Brief department description"
+              disabled={isCreating}
             />
           </div>
           <div className="grid grid-cols-4 items-center gap-4">
@@ -73,6 +64,7 @@ export const AddDepartmentDialog = ({
               onChange={(e) => setNewDepartment({...newDepartment, adminName: e.target.value})}
               className="col-span-3 bg-slate-800/70 border-slate-700/50 text-slate-200 focus-visible:ring-purple-500/70 focus-visible:border-purple-500/50 transition-all"
               placeholder="Department admin name"
+              disabled={isCreating}
             />
           </div>
           <div className="grid grid-cols-4 items-center gap-4">
@@ -85,6 +77,7 @@ export const AddDepartmentDialog = ({
               onChange={(e) => setNewDepartment({...newDepartment, adminEmail: e.target.value})}
               className="col-span-3 bg-slate-800/70 border-slate-700/50 text-slate-200 focus-visible:ring-purple-500/70 focus-visible:border-purple-500/50 transition-all"
               placeholder="admin@example.gov"
+              disabled={isCreating}
             />
           </div>
         </div>
@@ -93,15 +86,23 @@ export const AddDepartmentDialog = ({
             variant="outline" 
             onClick={() => setOpen(false)}
             className="bg-transparent border-violet-500/50 text-violet-300 hover:bg-violet-600/10 hover:border-violet-400 hover:text-white transition-all duration-300"
-            >
+            disabled={isCreating}
+          >
             Cancel
           </Button>
           <Button 
             onClick={handleAddDepartment}
             className="bg-gradient-to-r from-purple-600 to-fuchsia-600 hover:from-purple-500 hover:to-fuchsia-500 text-white"
-            disabled={!newDepartment.name || !newDepartment.adminName || !newDepartment.adminEmail}
+            disabled={!newDepartment.name || !newDepartment.adminName || !newDepartment.adminEmail || isCreating}
           >
-            Add Department
+            {isCreating ? (
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                Creating...
+              </>
+            ) : (
+              'Add Department'
+            )}
           </Button>
         </DialogFooter>
       </DialogContent>

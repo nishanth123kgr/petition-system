@@ -33,6 +33,8 @@ app.use('/api/petitions', petitionRoutes);
 app.use('/api/departments', departmentRoutes);
 app.use('/api/staff', staffRoutes);
 
-app.listen(PORT, () => {
+// Listen on all network interfaces (0.0.0.0) instead of just localhost
+app.listen(PORT, '0.0.0.0', () => {
     console.log(`Server is running on http://localhost:${PORT}`);
+    console.log(`Also accessible on your local network at http://<your-local-ip>:${PORT}`);
 });

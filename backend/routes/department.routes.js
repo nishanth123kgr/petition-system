@@ -15,14 +15,14 @@ const router = Router();
 // Department routes
 router.get('/', authenticateJWT, getAllDepartments);
 router.get('/:departmentId', authenticateJWT, getDepartmentById);
-router.post('/', authenticateJWT, authorizeRole(['super-admin']), createDepartment);
-router.put('/:departmentId', authenticateJWT, authorizeRole(['super-admin', 'department-admin']), updateDepartment);
+router.post('/', authenticateJWT, authorizeRole([3]), createDepartment);
+router.put('/:departmentId', authenticateJWT, authorizeRole([3, 2]), updateDepartment);
 
 // Department staff routes
-router.get('/:departmentId/staff', authenticateJWT, authorizeRole(['super-admin', 'department-admin']), getDepartmentStaff);
-router.post('/:departmentId/staff', authenticateJWT, authorizeRole(['super-admin', 'department-admin']), addStaffToDepartment);
+router.get('/:departmentId/staff', authenticateJWT, authorizeRole([3, 2]), getDepartmentStaff);
+router.post('/:departmentId/staff', authenticateJWT, authorizeRole([3, 2]), addStaffToDepartment);
 
 // Department petitions routes
-router.get('/:departmentId/petitions', authenticateJWT, authorizeRole(['super-admin', 'department-admin', 'staff']), getDepartmentPetitions);
+router.get('/:departmentId/petitions', authenticateJWT, authorizeRole([3, 2, 1]), getDepartmentPetitions);
 
 export default router;

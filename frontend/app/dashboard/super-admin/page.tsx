@@ -196,10 +196,10 @@ export default function SuperAdminDashboardPage() {
     setUpdatingStatus(petitionId)
     try {
       const response = await callAPI(`/api/petitions/${petitionId}`, 'PUT', {
-        petition: {
+        updateMap: {
           status: newStatus
         }
-      })
+      } as any)
       
       if (response && response.success) {
         // Update the local state with the new status
