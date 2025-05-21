@@ -14,6 +14,26 @@ import { Bell, Calendar, ChevronRight, ClipboardList, FileText, History, LayoutD
 import { StaffDashboardContent } from "../sections/staff/staff-dashboard-content"
 import { StaffPetitionsContent } from "../sections/staff/staff-petitions-content"
 import { SettingsContent } from "../sections/settings/settings-content"
+import callAPI from "@/app/utils/apiCaller"
+import { useRouter } from "next/navigation"
+import { useToast } from "@/hooks/use-toast"
+
+// Define interface for petition data
+interface Petition {
+  id: number;
+  title: string;
+  submittedBy: string;
+  submitted_by: string;
+  status: string;
+  priority: string;
+  assignedDate: string;   // camelCase
+  dueDate: string;        // camelCase
+  assigned_date: string;  // snake_case
+  due_date: string;       // snake_case
+  description: string;
+  severity: string;
+  [key: string]: any;     // Allow for other properties that may exist
+}
 
 // Navigation items data for cleaner code
 const navItems = [
@@ -22,46 +42,107 @@ const navItems = [
   { id: "settings", label: "Settings", icon: Settings, isPro: false },
 ]
 
-// Mock data for staff assigned petitions
-const mockPetitions = [
-  {
-    id: 301,
-    title: "Road Repair on Main Street",
-    submittedBy: "John Doe",
-    status: "In Progress",
-    priority: "High",
-    assignedDate: "2023-04-16",
-    dueDate: "2023-04-30",
-    description: "The road on Main Street has several potholes that need to be fixed urgently.",
-  },
-  {
-    id: 302,
-    title: "Sidewalk Repair on Oak Avenue",
-    submittedBy: "Jane Smith",
-    status: "Not Started",
-    priority: "Medium",
-    assignedDate: "2023-04-15",
-    dueDate: "2023-05-05",
-    description: "The sidewalk on Oak Avenue is damaged and poses a risk to pedestrians.",
-  },
-  {
-    id: 303,
-    title: "Street Light Maintenance",
-    submittedBy: "Robert Johnson",
-    status: "In Progress",
-    priority: "Low",
-    assignedDate: "2023-04-10",
-    dueDate: "2023-04-25",
-    description: "Several street lights on Pine Street are not working and need to be replaced.",
-  },
-]
 
 export function StaffDashboardLayout({ children }: { children: React.ReactNode }) {
   const [isSidebarOpen, setSidebarOpen] = useState(false);
   const [activeTab, setActiveTab] = useState("dashboard");
-  const [petitions, setPetitions] = useState(mockPetitions);
-  
-  const pathname = usePathname();
+  const [petitions, setPetitions] = useState<Petition[]>([]); // Properly typed state
+  const [name, setName] = useState("Name");
+  const [email, setEmail] = useState("Email");
+  const [avatar, setAvatar] = useState("A");
+  const [department, setDepartment] = useState("Department");
+
+  const router = useRouter();
+  const { toast } = useToast();
+
+  useEffect(() => {
+    async function checkAuthStatus() {
+      try {
+        const response = await callAPI('/api/auth/me', 'GET');
+        if (response && response.user && response.user.role !== 1) {
+          toast({
+            title: "Unauthorized",
+            description: "You do not have permission to access this page",
+            variant: "destructive",
+          });
+          router.push('/auth/login');
+        }
+        if (response && response.user) {
+          setName(response.user.name);
+          setEmail(response.user.email);
+          setAvatar(response.user.name[0].toUpperCase());
+          setDepartment(response.user.departmentName);
+        } else {
+          toast({
+            title: "Authentication error",
+            description: "Please login to continue",
+            variant: "destructive",
+          });
+          router.push('/auth/login');
+        }
+      } catch (error) {
+        console.log("Authentication error:", error);
+        toast({
+          title: "Authentication error",
+          description: "Please login to continue",
+          variant: "destructive",
+        });
+        router.push('/auth/login');
+      }
+    }
+
+    checkAuthStatus();
+  }, [router, toast])
+
+  useEffect(() => {
+    const fetchPetitions = async () => {
+      try {
+        let originalPetitions = await callAPI('/api/petitions', 'GET');
+        console.log("Fetched petitions:", originalPetitions);
+        if (originalPetitions && originalPetitions.success) {
+          setPetitions(originalPetitions.data);
+        } else {
+          setPetitions([]);
+        }
+      } catch (error) {
+        console.error("Error fetching petitions:", error);
+        setPetitions([]);
+      }
+    };
+
+    // Only fetch petitions if user is authenticated (email exists)
+    if (email) {
+      fetchPetitions();
+    }
+  }, [email]); // Add email as dependency to trigger fetch when user is authenticated
+
+  async function handleLogout() {
+    try {
+      const response = await callAPI('/api/auth/logout');
+      if (response && response.success) {
+        toast({
+          title: "Logged out",
+          description: "You have been logged out successfully",
+          variant: "default",
+        });
+        router.push('/auth/login');
+      } else {
+        toast({
+          title: "Logout error",
+          description: "An error occurred while logging out",
+          variant: "destructive",
+        });
+      }
+    } catch (error) {
+      console.error("Logout error:", error);
+      toast({
+        title: "Logout error",
+        description: "An error occurred while logging out",
+        variant: "destructive",
+      });
+    }
+  }
+
 
   // Handle petition status updates
   const handleUpdateStatus = (id: number, newStatus: string) => {
@@ -85,7 +166,7 @@ export function StaffDashboardLayout({ children }: { children: React.ReactNode }
 
     window.addEventListener('keydown', handleEscKey);
     window.addEventListener('resize', handleResize);
-    
+
     return () => {
       window.removeEventListener('keydown', handleEscKey);
       window.removeEventListener('resize', handleResize);
@@ -99,7 +180,7 @@ export function StaffDashboardLayout({ children }: { children: React.ReactNode }
     } else {
       document.body.style.overflow = '';
     }
-    
+
     return () => {
       document.body.style.overflow = '';
     };
@@ -111,7 +192,7 @@ export function StaffDashboardLayout({ children }: { children: React.ReactNode }
       case "dashboard":
         return <StaffDashboardContent petitions={petitions} onUpdateStatus={handleUpdateStatus} />;
       case "petitions":
-        return <StaffPetitionsContent petitions={petitions} onUpdateStatus={handleUpdateStatus} />;
+        return <StaffPetitionsContent petitions={petitions} onUpdateStatus={handleUpdateStatus} department={department} />;
       case "settings":
         return <SettingsContent />;
       default:
@@ -149,7 +230,7 @@ export function StaffDashboardLayout({ children }: { children: React.ReactNode }
               </h1>
             </Link>
           </div>
-          
+
           <div className="flex items-center ml-auto gap-1 md:gap-3">
             {/* Update Status Button */}
             <Popover>
@@ -191,42 +272,42 @@ export function StaffDashboardLayout({ children }: { children: React.ReactNode }
                   <Button variant="ghost" className="relative h-9 w-9 rounded-full border border-slate-700/50 hover:border-violet-500/50 transition-all duration-300 p-0">
                     <Avatar>
                       <AvatarImage src="/placeholder-user.jpg" alt="Staff Member" />
-                      <AvatarFallback className="bg-violet-900/60 text-violet-200">SM</AvatarFallback>
+                      <AvatarFallback className="bg-violet-900/60 text-violet-200">{avatar}</AvatarFallback>
                     </Avatar>
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent className="w-56 bg-slate-900 border-slate-800 shadow-xl shadow-slate-950/50 mt-1">
                   <div className="flex items-center gap-2 p-3">
                     <div className="bg-violet-900/60 h-10 w-10 rounded-full flex items-center justify-center text-violet-200">
-                      SM
+                      {avatar}
                     </div>
                     <div>
-                      <div className="font-medium text-sm text-slate-200">Staff Member</div>
-                      <div className="text-xs text-slate-400">staff@infrastructure.gov</div>
+                      <div className="font-medium text-sm text-slate-200">{name}</div>
+                      <div className="text-xs text-slate-400">{email}</div>
                     </div>
                   </div>
                   <DropdownMenuSeparator className="bg-slate-800" />
-                  <DropdownMenuItem 
-                    onClick={() => setActiveTab("settings")} 
+                  {/* <DropdownMenuItem
+                    onClick={() => setActiveTab("settings")}
                     className="text-slate-200 focus:bg-slate-800 focus:text-white cursor-pointer"
                   >
                     <User className="mr-2 h-4 w-4" />
                     <span>Profile</span>
-                  </DropdownMenuItem>
-                  <DropdownMenuItem 
-                    onClick={() => setActiveTab("settings")} 
+                  </DropdownMenuItem> */}
+                  <DropdownMenuItem
+                    onClick={() => setActiveTab("settings")}
                     className="text-slate-200 focus:bg-slate-800 focus:text-white cursor-pointer"
                   >
                     <Settings className="mr-2 h-4 w-4" />
                     <span>Settings</span>
                   </DropdownMenuItem>
                   <DropdownMenuSeparator className="bg-slate-800" />
-                  <Link href="/auth/login">
+                  <div onClick={handleLogout} className="w-full text-left">
                     <DropdownMenuItem className="text-red-400 focus:bg-red-900/20 focus:text-red-300 cursor-pointer">
                       <LogOut className="mr-2 h-4 w-4" />
                       <span>Log out</span>
                     </DropdownMenuItem>
-                  </Link>
+                  </div>
                 </DropdownMenuContent>
               </DropdownMenu>
             </div>
@@ -258,11 +339,11 @@ export function StaffDashboardLayout({ children }: { children: React.ReactNode }
                 <div className="mb-6">
                   <div className="flex items-center px-2 mb-6">
                     <div className="w-8 h-8 rounded-full bg-gradient-to-br from-violet-500 to-indigo-500 flex items-center justify-center text-white text-sm font-bold">
-                      SM
+                      {avatar}
                     </div>
                     <div className="ml-3">
-                      <p className="text-sm font-medium text-slate-200">Staff Member</p>
-                      <p className="text-xs text-slate-400">Infrastructure</p>
+                      <p className="text-sm font-medium text-slate-200">{name}</p>
+                      <p className="text-xs text-slate-400">{department}</p>
                     </div>
                   </div>
                   <div className="h-px bg-gradient-to-r from-transparent via-slate-700/50 to-transparent mb-6"></div>
@@ -294,16 +375,15 @@ export function StaffDashboardLayout({ children }: { children: React.ReactNode }
 
             {/* Fixed logout section - always at bottom and visible */}
             <div className="p-4 border-t border-slate-800/60 bg-slate-900/80 backdrop-blur-sm">
-              <Link href="/auth/login">
-                <Button
-                  variant="ghost"
-                  className="w-full justify-start group relative overflow-hidden text-red-400 hover:text-red-300 hover:bg-red-900/20 truncate"
-                >
-                  <LogOut className="min-w-[16px] mr-2 h-4 w-4" />
-                  <span className="truncate">Logout</span>
-                  <span className="absolute inset-0 h-full w-full scale-0 rounded-md bg-red-500/10 transition-all duration-300 group-hover:scale-100 group-hover:opacity-100" />
-                </Button>
-              </Link>
+              <Button
+                variant="ghost"
+                className="w-full justify-start group relative overflow-hidden text-red-400 hover:text-red-300 hover:bg-red-900/20 truncate"
+                onClick={handleLogout}
+              >
+                <LogOut className="min-w-[16px] mr-2 h-4 w-4" />
+                <span className="truncate">Logout</span>
+                <span className="absolute inset-0 h-full w-full scale-0 rounded-md bg-red-500/10 transition-all duration-300 group-hover:scale-100 group-hover:opacity-100" />
+              </Button>
             </div>
           </div>
         </aside>
@@ -318,8 +398,8 @@ export function StaffDashboardLayout({ children }: { children: React.ReactNode }
               transition={{ duration: 0.3 }}
               className="text-sm text-slate-400 flex items-center gap-1.5"
             >
-              <button 
-                onClick={() => setActiveTab("dashboard")} 
+              <button
+                onClick={() => setActiveTab("dashboard")}
                 className="hover:text-violet-300 transition-colors flex items-center"
               >
                 <LayoutDashboard className="h-3.5 w-3.5 mr-1.5" />
@@ -356,17 +436,17 @@ export function StaffDashboardLayout({ children }: { children: React.ReactNode }
             <div className="relative rounded-xl bg-slate-900/50 backdrop-blur-sm border border-slate-800/60 shadow-lg overflow-hidden">
               {/* Top decorative gradient line */}
               <div className="absolute top-0 inset-x-0 h-px bg-gradient-to-r from-transparent via-violet-500/40 to-transparent"></div>
-              
+
               {/* Content with padding */}
               <div className="w-full">
                 {renderActiveContent()}
               </div>
-              
+
               {/* Bottom decorative gradient line */}
               <div className="absolute bottom-0 inset-x-0 h-px bg-gradient-to-r from-transparent via-indigo-500/40 to-transparent"></div>
             </div>
           </motion.div>
-          
+
           {/* Footer */}
           <footer className="mt-8 text-center text-xs text-slate-500 py-4">
             <p>© 2025 Petition System. All rights reserved.</p>

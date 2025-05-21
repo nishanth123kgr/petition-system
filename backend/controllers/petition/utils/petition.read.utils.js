@@ -5,7 +5,16 @@ export const getPetitionsForSuperAdmin = async () => {
     try {
         const { data, error } = await supabaseClient
             .from('petitions')
-            .select('*');
+            .select(`*,
+                assigned_to:users!assigned_to (
+                name
+                ),
+                submitted_by:users!submitted_by (
+                name
+                ),
+                departments (
+                name
+                )`);
 
         if (error) throw error;
 
@@ -67,7 +76,10 @@ export const getPetitionsForStaff = async (staffId) => {
     try {
         const { data, error } = await supabaseClient
             .from('petitions')
-            .select('*')
+            .select(`*,
+                submitted_by:users!submitted_by (
+                    name
+                    )`)
             .eq('assigned_to', staffId);
 
         if (error) throw error;

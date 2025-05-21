@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { motion } from "framer-motion"
 import { DepartmentCard } from "./departments/department-card"
 import { SearchAndFilterBar } from "./departments/search-and-filter-bar"
@@ -8,8 +8,8 @@ import { EmptyState } from "./departments/empty-state"
 import { AddDepartmentDialog } from "./departments/add-department-dialog"
 import { Department, NewDepartmentData, containerVariants, itemVariants, mockDepartments } from "./departments/types"
 
-export function DepartmentsContent() {
-  const [departments, setDepartments] = useState<Department[]>(mockDepartments)
+export function DepartmentsContent({ departments }: { departments?: Department[] }) {
+  const [localDepartments, setLocalDepartments] = useState<Department[]>(departments || mockDepartments)
   const [searchTerm, setSearchTerm] = useState("")
   const [statusFilter, setStatusFilter] = useState("all")
   const [openAddDialog, setOpenAddDialog] = useState(false)
@@ -20,8 +20,15 @@ export function DepartmentsContent() {
     adminEmail: ""
   })
 
+  // Update local departments when prop changes
+  useEffect(() => {
+    if (departments) {
+      setLocalDepartments(departments);
+    }
+  }, [departments]);
+  
   // Filter departments based on search term and status
-  const filteredDepartments = departments.filter((department) => {
+  const filteredDepartments = localDepartments.filter((department) => {
     const matchesSearch =
       department.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
       department.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -36,7 +43,7 @@ export function DepartmentsContent() {
   // Add new department
   const handleAddDepartment = () => {
     const newDept: Department = {
-      id: departments.length + 1,
+      id: localDepartments.length + 1,
       name: newDepartment.name,
       description: newDepartment.description,
       adminName: newDepartment.adminName,
@@ -46,7 +53,7 @@ export function DepartmentsContent() {
       status: "Active"
     }
 
-    setDepartments([...departments, newDept])
+    setLocalDepartments([...localDepartments, newDept])
     setOpenAddDialog(false)
     setNewDepartment({ name: "", description: "", adminName: "", adminEmail: "" })
   }

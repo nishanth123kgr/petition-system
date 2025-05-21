@@ -29,9 +29,7 @@ export const DepartmentCard = ({ department }: DepartmentCardProps) => {
             </div>
             <DepartmentStatusBadge status={department.status} />
           </div>
-          <CardDescription className="text-slate-400 mt-2">
-            {department.description}
-          </CardDescription>
+
         </CardHeader>
         <CardContent className="relative z-10 pt-0">
           <div className="my-2 h-px bg-slate-800/70"></div>
@@ -46,7 +44,7 @@ export const DepartmentCard = ({ department }: DepartmentCardProps) => {
             activePetitions={department.activePetitions} 
           />
           
-          <DepartmentActions />
+          {/* <DepartmentActions /> */}
         </CardContent>
       </Card>
     </motion.div>

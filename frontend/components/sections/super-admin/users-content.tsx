@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { motion } from "framer-motion"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -187,9 +187,9 @@ const itemVariants = {
   }
 }
 
-export function UsersContent() {
+export function UsersContent({ users: usersFromProps }: { users?: any[] }) {
   const [activeTab, setActiveTab] = useState("all")
-  const [users, setUsers] = useState(mockUsers)
+  const [users, setUsers] = useState(usersFromProps || mockUsers)
   const [searchTerm, setSearchTerm] = useState("")
   const [roleFilter, setRoleFilter] = useState("all")
   const [statusFilter, setStatusFilter] = useState("all")
@@ -201,6 +201,13 @@ export function UsersContent() {
     department: "",
     status: "active"
   })
+
+  // Update local users when props change
+  useEffect(() => {
+    if (usersFromProps) {
+      setUsers(usersFromProps);
+    }
+  }, [usersFromProps]);
 
   // Get filtered users based on search term, role and status
   const filteredUsers = users.filter((user) => {
@@ -587,7 +594,7 @@ function UsersTable({ users }: { users: any[] }) {
                          user.role === "Staff" ? "bg-blue-900/30 text-blue-200" :
                          "bg-slate-700 text-slate-200"}
                       `}>
-                        {user.name.split(" ").map((n: any[]) => n[0]).join("")}
+                        {user.name[0].toUpperCase()}
                       </AvatarFallback>
                     </Avatar>
                     <span className="text-slate-300">{user.name}</span>

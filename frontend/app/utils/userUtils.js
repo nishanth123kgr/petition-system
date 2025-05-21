@@ -12,3 +12,18 @@ export function getUserRoleWithID(id)
             return "user";
     }
 }
+
+export function getUserRoleForSuperAdmin(id)
+{
+    switch(id)
+    {
+        case 1:
+            return "Staff";
+        case 2:
+            return "Department Admin";
+        case 3:
+            return "Super Admin";
+        default:
+            return "Citizen";
+    }
+}

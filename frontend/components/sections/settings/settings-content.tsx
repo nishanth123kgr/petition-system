@@ -7,10 +7,24 @@ import { Label } from "@/components/ui/label"
 import { Switch } from "@/components/ui/switch"
 import { useState } from "react"
 
-export function SettingsContent() {
+interface SettingsContentProps {
+  userProfile?: {
+    name: string;
+    email: string;
+    avatar: string;
+  };
+}
+
+export function SettingsContent({ userProfile }: SettingsContentProps) {
   const [emailNotifications, setEmailNotifications] = useState(true)
   const [pushNotifications, setPushNotifications] = useState(true)
   
+  // Extract first and last name from the full name
+  const nameParts = userProfile?.name ? userProfile.name.split(' ') : ['John', 'Doe'];
+  const firstName = nameParts[0] || 'John';
+  const lastName = nameParts.slice(1).join(' ') || 'Doe';
+  const email = userProfile?.email || 'staff@infrastructure.gov';
+
   return (
     <div className="p-6">
       <div className="mb-6">
@@ -34,7 +48,7 @@ export function SettingsContent() {
                 <Input 
                   id="firstName" 
                   placeholder="First name" 
-                  defaultValue="John"
+                  defaultValue={firstName}
                   className="bg-slate-800/70 border-slate-700/50 text-slate-200 focus-visible:ring-violet-500/70 focus-visible:ring-offset-slate-900"
                 />
               </div>
@@ -43,7 +57,7 @@ export function SettingsContent() {
                 <Input 
                   id="lastName" 
                   placeholder="Last name" 
-                  defaultValue="Doe"
+                  defaultValue={lastName}
                   className="bg-slate-800/70 border-slate-700/50 text-slate-200 focus-visible:ring-violet-500/70 focus-visible:ring-offset-slate-900"
                 />
               </div>
@@ -54,7 +68,7 @@ export function SettingsContent() {
                 id="email" 
                 type="email" 
                 placeholder="Email address" 
-                defaultValue="staff@infrastructure.gov"
+                defaultValue={email}
                 className="bg-slate-800/70 border-slate-700/50 text-slate-200 focus-visible:ring-violet-500/70 focus-visible:ring-offset-slate-900"
               />
             </div>

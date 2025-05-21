@@ -1,6 +1,6 @@
 "use client"
 
-import React, { useState } from "react"
+import React, { useState, useEffect } from "react"
 import { motion } from "framer-motion"
 import { Button } from "../../../components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../../../components/ui/card"
@@ -8,6 +8,9 @@ import { Input } from "../../../components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../../../components/ui/select"
 import { Badge } from "../../../components/ui/badge"
 import { SuperAdminLayout } from "../../../components/layouts/super-admin-layout"
+import { useToast } from "@/hooks/use-toast"
+import { Loader2 } from "lucide-react"
+import callAPI from "@/app/utils/apiCaller"
 import {
   BarChart,
   Bar,
@@ -21,6 +24,23 @@ import {
   Pie,
   Cell,
 } from "recharts"
+
+// Define the petition type
+interface Petition {
+  id: number
+  title: string
+  department: string
+  submittedBy: string
+  submitted_by: string
+  status: string
+  priority: string
+  severity: string
+  createdAt: string
+  created_at: string
+  description: string
+  due_date?: string
+  assigned_to?: string
+}
 
 // Mock data for analytics
 const departmentData = [
@@ -39,55 +59,6 @@ const statusData = [
 ]
 
 const COLORS = ["#8b5cf6", "#6366f1", "#a78bfa", "#818cf8", "#c4b5fd", "#a5b4fc"]
-
-// Mock data for all petitions
-const mockPetitions = [
-  {
-    id: 201,
-    title: "Road Repair on Main Street",
-    department: "Infrastructure",
-    submittedBy: "John Doe",
-    status: "In Progress",
-    priority: "High",
-    createdAt: "2023-04-15",
-  },
-  {
-    id: 202,
-    title: "New Textbooks for Elementary School",
-    department: "Education",
-    submittedBy: "Jane Smith",
-    status: "New",
-    priority: "Medium",
-    createdAt: "2023-04-12",
-  },
-  {
-    id: 203,
-    title: "Hospital Equipment Upgrade",
-    department: "Healthcare",
-    submittedBy: "Robert Johnson",
-    status: "Completed",
-    priority: "High",
-    createdAt: "2023-04-10",
-  },
-  {
-    id: 204,
-    title: "Park Cleanup Initiative",
-    department: "Environment",
-    submittedBy: "Emily Wilson",
-    status: "In Progress",
-    priority: "Medium",
-    createdAt: "2023-04-08",
-  },
-  {
-    id: 205,
-    title: "Street Light Installation",
-    department: "Public Safety",
-    submittedBy: "Michael Brown",
-    status: "New",
-    priority: "High",
-    createdAt: "2023-04-05",
-  },
-]
 
 // Animation variants
 const containerVariants = {
@@ -120,10 +91,149 @@ const statsVariants = {
 }
 
 export default function SuperAdminDashboardPage() {
-  const [petitions, setPetitions] = useState(mockPetitions)
+  const [petitions, setPetitions] = useState<Petition[]>([])
   const [searchTerm, setSearchTerm] = useState("")
   const [departmentFilter, setDepartmentFilter] = useState("all")
   const [statusFilter, setStatusFilter] = useState("all")
+  const [loading, setLoading] = useState(true)
+  const [updatingStatus, setUpdatingStatus] = useState<number | null>(null)
+  const { toast } = useToast()
+  const [statusCounts, setStatusCounts] = useState(statusData)
+  const [departmentCounts, setDepartmentCounts] = useState(departmentData)
+
+  // Fetch petitions data
+  useEffect(() => {
+    const fetchPetitions = async () => {
+      try {
+        setLoading(true)
+        const response = await callAPI('/api/petitions', 'GET')
+        
+        if (response && response.success) {
+          // Transform the data to match our component needs
+          const formattedPetitions = response.data.map((petition: any) => ({
+            id: petition.id,
+            title: petition.title,
+            department: petition.department,
+            submittedBy: petition.submitted_by,
+            submitted_by: petition.submitted_by,
+            status: petition.status,
+            priority: petition.severity,
+            createdAt: petition.created_at.split('T')[0],
+            created_at: petition.created_at,
+            description: petition.description,
+            due_date: petition.due_date,
+            assigned_to: petition.assigned_to
+          }))
+          
+          setPetitions(formattedPetitions)
+          
+          // Update analytics data
+          updateAnalyticsData(formattedPetitions)
+        } else {
+          toast({
+            title: "Error",
+            description: "Failed to fetch petitions",
+            variant: "destructive",
+          })
+        }
+      } catch (error) {
+        console.error("Error fetching petitions:", error)
+        toast({
+          title: "Error",
+          description: "Failed to fetch petitions",
+          variant: "destructive",
+        })
+      } finally {
+        setLoading(false)
+      }
+    }
+    
+    fetchPetitions()
+    
+    // Set up a refresh interval (every 30 seconds)
+    const intervalId = setInterval(() => {
+      fetchPetitions()
+    }, 30000)
+    
+    // Clean up the interval when the component unmounts
+    return () => clearInterval(intervalId)
+  }, [toast])
+  
+  // Function to update analytics data based on petitions
+  const updateAnalyticsData = (petitionData: any[]) => {
+    // Count petitions by status
+    const statusMap = petitionData.reduce((acc: any, petition: any) => {
+      const status = petition.status
+      acc[status] = (acc[status] || 0) + 1
+      return acc
+    }, {})
+    
+    // Format status data for chart
+    const newStatusData = Object.entries(statusMap).map(([name, value]) => ({ 
+      name, 
+      value: value as number 
+    }))
+    
+    // Count petitions by department
+    const departmentMap = petitionData.reduce((acc: any, petition: any) => {
+      const dept = petition.department
+      acc[dept] = (acc[dept] || 0) + 1
+      return acc
+    }, {})
+    
+    // Format department data for chart
+    const newDepartmentData = Object.entries(departmentMap).map(([name, petitions]) => ({ 
+      name, 
+      petitions: petitions as number 
+    }))
+    
+    setStatusCounts(newStatusData.length > 0 ? newStatusData : statusData)
+    setDepartmentCounts(newDepartmentData.length > 0 ? newDepartmentData : departmentData)
+  }
+  
+  // Update petition status
+  const updatePetitionStatus = async (petitionId: number, newStatus: string) => {
+    setUpdatingStatus(petitionId)
+    try {
+      const response = await callAPI(`/api/petitions/${petitionId}`, 'PUT', {
+        petition: {
+          status: newStatus
+        }
+      })
+      
+      if (response && response.success) {
+        // Update the local state with the new status
+        setPetitions(prevPetitions => prevPetitions.map(p => 
+          p.id === petitionId ? {...p, status: newStatus} : p
+        ))
+        
+        // Update analytics data
+        updateAnalyticsData(petitions.map(p => 
+          p.id === petitionId ? {...p, status: newStatus} : p
+        ))
+        
+        toast({
+          title: "Status updated",
+          description: `Petition #${petitionId} status changed to ${newStatus}`,
+        })
+      } else {
+        toast({
+          title: "Update failed",
+          description: response?.message || "Failed to update petition status",
+          variant: "destructive",
+        })
+      }
+    } catch (error) {
+      console.error("Error updating petition status:", error)
+      toast({
+        title: "Error",
+        description: "Failed to update petition status",
+        variant: "destructive",
+      })
+    } finally {
+      setUpdatingStatus(null)
+    }
+  }
 
   const filteredPetitions = petitions.filter((petition) => {
     const matchesSearch =
@@ -385,14 +495,36 @@ export default function SuperAdminDashboardPage() {
                           </td>
                           <td className="py-3 px-4 text-slate-300">{petition.createdAt}</td>
                           <td className="py-3 px-4">
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              className="relative overflow-hidden group border-slate-700 text-slate-300 hover:border-violet-500/50 hover:text-slate-100"
+                            <Select
+                              defaultValue={petition.status.toLowerCase().replace(" ", "-")}
+                              onValueChange={(value) => {
+                                const statusMap: Record<string, string> = {
+                                  "new": "New",
+                                  "in-progress": "In Progress",
+                                  "completed": "Completed",
+                                  "rejected": "Rejected"
+                                }
+                                updatePetitionStatus(petition.id, statusMap[value])
+                              }}
+                              disabled={updatingStatus === petition.id}
                             >
-                              <span className="relative z-10">View</span>
-                              <span className="absolute inset-0 h-full w-full scale-0 rounded-md bg-violet-500/10 transition-all duration-300 group-hover:scale-100 group-hover:opacity-100" />
-                            </Button>
+                              <SelectTrigger className="w-[160px] bg-slate-800/70 border-slate-700/50 text-slate-200 focus:ring-violet-500/70 focus:ring-offset-slate-900">
+                                {updatingStatus === petition.id ? (
+                                  <div className="flex items-center justify-center">
+                                    <Loader2 className="mr-2 h-4 w-4 animate-spin text-violet-400" />
+                                    <span>Updating...</span>
+                                  </div>
+                                ) : (
+                                  <SelectValue placeholder="Update status" />
+                                )}
+                              </SelectTrigger>
+                              <SelectContent className="bg-slate-800 border-slate-700 text-slate-200">
+                                <SelectItem value="new">New</SelectItem>
+                                <SelectItem value="in-progress">In Progress</SelectItem>
+                                <SelectItem value="completed">Completed</SelectItem>
+                                <SelectItem value="rejected">Rejected</SelectItem>
+                              </SelectContent>
+                            </Select>
                           </td>
                         </tr>
                       ))}

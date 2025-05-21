@@ -6,7 +6,9 @@ import { StaffPetitionCard } from "@/components/ui/staff-petition-card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Card, CardContent } from "@/components/ui/card"
-import { User, Calendar, Tag, MessageSquare, ThumbsUp, ChevronLeft, Clock } from "lucide-react"
+import { User, Calendar, Tag, MessageSquare, ThumbsUp, ChevronLeft, Clock, Loader2 } from "lucide-react"
+import callAPI from "@/app/utils/apiCaller"
+import { useToast } from "@/hooks/use-toast"
 
 // Mock detailed petition data - in a real app this would come from an API
 const mockDetailedPetition = {
@@ -73,13 +75,8 @@ const statusColors = {
 
 // Format date
 const formatDate = (dateString: string) => {
-  const date = new Date(dateString);
-  return new Intl.DateTimeFormat('en-US', {
-    month: 'short',
-    day: 'numeric',
-    year: 'numeric'
-  }).format(date);
-};
+      return dateString ? dateString.split("T")[0] : "Not Assigned";
+}
 
 // Parse HTML content
 const createMarkup = (htmlContent: string) => {
@@ -91,31 +88,75 @@ interface StaffPetitionsContentProps {
     id: number
     title: string
     submittedBy: string
+    submitted_by: string
     status: string
     priority: string
     assignedDate: string
     dueDate: string
+    severity: string
+    assigned_date: string
+    due_date: string
     description: string
   }>
   onUpdateStatus: (id: number, newStatus: string) => void
+  department: string
 }
 
-export function StaffPetitionsContent({ petitions, onUpdateStatus }: StaffPetitionsContentProps) {
+export function StaffPetitionsContent({ petitions, onUpdateStatus, department }: StaffPetitionsContentProps) {
   const [selectedPetition, setSelectedPetition] = useState<any>(null)
+  const [loadingStatusUpdate, setLoadingStatusUpdate] = useState<number | null>(null)
+  const { toast } = useToast()
   
   // Handle viewing petition details
   const handleViewDetails = (petitionId: number) => {
     // In a real app, you would fetch the petition details from the API
     // For now, we'll use our mock data
-    setSelectedPetition({
-      ...mockDetailedPetition,
-      id: petitionId.toString()
-    });
+    setSelectedPetition(petitions.find((petition)=>petition.id === petitionId));
   }
 
   // Handle back to list
   const handleBackToList = () => {
     setSelectedPetition(null);
+  }
+
+  // Handle updating petition status
+  const handleUpdateStatus = async (id: number, status: string) => {
+    try {
+      // Set loading state for this petition
+      setLoadingStatusUpdate(id);
+      
+      // Call the API to update the status
+      const result = await callAPI(`/api/petitions/${id}`, "PUT", { 
+        updateMap: { status } 
+      } as any);
+      
+      if (result.success) {
+        // If API call is successful, call the parent onUpdateStatus function
+        onUpdateStatus(id, status);
+        
+        toast({
+          title: "Status Updated",
+          description: `Petition status changed to ${status}`,
+          variant: "default"
+        });
+      } else {
+        toast({
+          title: "Error",
+          description: result.message || "Failed to update petition status",
+          variant: "destructive"
+        });
+      }
+    } catch (error) {
+      console.error("Error updating status:", error);
+      toast({
+        title: "Error",
+        description: "An unexpected error occurred",
+        variant: "destructive"
+      });
+    } finally {
+      // Clear loading state
+      setLoadingStatusUpdate(null);
+    }
   }
 
   const itemVariants = {
@@ -151,8 +192,9 @@ export function StaffPetitionsContent({ petitions, onUpdateStatus }: StaffPetiti
                 >
                   <StaffPetitionCard 
                     petition={petition} 
-                    onUpdateStatus={onUpdateStatus} 
+                    onUpdateStatus={handleUpdateStatus} 
                     onViewDetails={handleViewDetails}
+                    isLoading={loadingStatusUpdate === petition.id}
                   />
                 </motion.div>
               ))
@@ -201,14 +243,10 @@ export function StaffPetitionsContent({ petitions, onUpdateStatus }: StaffPetiti
             className="space-y-3"
           >
             <div className="flex flex-wrap items-center justify-between gap-2">
-              <Badge 
-                className={`px-2.5 py-0.5 ${statusColors[selectedPetition.status as keyof typeof statusColors] || "bg-slate-500"}`}
-              >
-                {selectedPetition.status}
-              </Badge>
+              <StatusBadge status={selectedPetition.status} />
               <div className="text-sm text-slate-400 flex items-center">
                 <Calendar className="inline h-3.5 w-3.5 mr-1" />
-                Submitted on {formatDate(selectedPetition.createdAt)}
+                Submitted on {formatDate(selectedPetition.created_at)}
               </div>
             </div>
             
@@ -217,15 +255,7 @@ export function StaffPetitionsContent({ petitions, onUpdateStatus }: StaffPetiti
             <div className="flex flex-wrap items-center gap-x-6 gap-y-2 text-sm text-slate-400">
               <div className="flex items-center">
                 <User className="inline h-4 w-4 mr-1.5 text-slate-500" />
-                <span>Created by {selectedPetition.createdBy}</span>
-              </div>
-              <div className="flex items-center">
-                <Tag className="inline h-4 w-4 mr-1.5 text-slate-500" />
-                <span>{selectedPetition.category}</span>
-              </div>
-              <div className="flex items-center">
-                <MessageSquare className="inline h-4 w-4 mr-1.5 text-slate-500" />
-                <span>{selectedPetition.commentCount} Comments</span>
+                <span>Created by {selectedPetition.submitted_by}</span>
               </div>
             </div>
           </motion.div>
@@ -242,13 +272,13 @@ export function StaffPetitionsContent({ petitions, onUpdateStatus }: StaffPetiti
                 <div className="text-sm text-slate-400 mb-1">Priority</div>
                 <div className="flex items-center">
                   <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                    selectedPetition.priority === "High" 
+                    selectedPetition.severity === "High" 
                       ? "bg-red-900/60 text-red-200" 
-                      : selectedPetition.priority === "Medium"
+                      : selectedPetition.severity === "Medium"
                       ? "bg-amber-900/60 text-amber-200"
                       : "bg-green-900/60 text-green-200"
                   }`}>
-                    {selectedPetition.priority}
+                    {selectedPetition.severity}
                   </span>
                 </div>
               </div>
@@ -257,8 +287,8 @@ export function StaffPetitionsContent({ petitions, onUpdateStatus }: StaffPetiti
                 <div className="text-sm text-slate-400 mb-1">Due Date</div>
                 <div className="font-medium text-slate-200 flex items-center">
                   <Calendar className="inline h-4 w-4 mr-1.5 text-slate-500" />
-                  {formatDate(selectedPetition.dueDate)}
-                  {new Date(selectedPetition.dueDate) < new Date(Date.now() + 7 * 24 * 60 * 60 * 1000) && (
+                  {formatDate(selectedPetition.due_date)}
+                  {selectedPetition.due_date && new Date(selectedPetition.due_date) < new Date(Date.now() + 7 * 24 * 60 * 60 * 1000) && (
                     <Badge className="ml-2 bg-red-900/60 text-red-200 border-0">Due Soon</Badge>
                   )}
                 </div>
@@ -267,7 +297,7 @@ export function StaffPetitionsContent({ petitions, onUpdateStatus }: StaffPetiti
               <div>
                 <div className="text-sm text-slate-400 mb-1">Department</div>
                 <div className="font-medium text-slate-200">
-                  {selectedPetition.department}
+                  {department}
                 </div>
               </div>
             </div>
@@ -284,7 +314,7 @@ export function StaffPetitionsContent({ petitions, onUpdateStatus }: StaffPetiti
               <h2 className="text-lg font-medium text-slate-100 mb-4">Description</h2>
               <div 
                 className="prose prose-sm prose-invert max-w-none text-slate-300"
-                dangerouslySetInnerHTML={createMarkup(selectedPetition.longDescription)}
+                dangerouslySetInnerHTML={createMarkup(selectedPetition.description)}
               />
             </div>
             
@@ -353,38 +383,36 @@ export function StaffPetitionsContent({ petitions, onUpdateStatus }: StaffPetiti
               </div>
             </motion.div>
           )}
-          
-          {/* Update status buttons */}
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.3, delay: 0.4 }}
-            className="flex flex-wrap gap-3 justify-center sm:justify-end pt-4"
-          >
-            <Button 
-              variant="outline" 
-              className="border-indigo-700 text-indigo-300 hover:bg-indigo-900/20 hover:border-indigo-600" 
-              onClick={() => onUpdateStatus(parseInt(selectedPetition.id), "Not Started")}
-            >
-              Mark as Not Started
-            </Button>
-            <Button 
-              variant="outline" 
-              className="border-violet-700 text-violet-300 hover:bg-violet-900/20 hover:border-violet-600" 
-              onClick={() => onUpdateStatus(parseInt(selectedPetition.id), "In Progress")}
-            >
-              Mark as In Progress
-            </Button>
-            <Button 
-              variant="outline" 
-              className="border-emerald-700 text-emerald-300 hover:bg-emerald-900/20 hover:border-emerald-600" 
-              onClick={() => onUpdateStatus(parseInt(selectedPetition.id), "Completed")}
-            >
-              Mark as Completed
-            </Button>
-          </motion.div>
         </div>
       )}
     </div>
   )
+}
+
+export function StatusBadge({ status }: { status: string }) {
+  let bgColor = "bg-slate-700"
+  let textColor = "text-slate-200"
+
+  switch (status) {
+      case "New":
+          bgColor = "bg-indigo-900/60"
+          textColor = "text-indigo-200"
+          break
+      case "In Progress":
+          bgColor = "bg-violet-900/60"
+          textColor = "text-violet-200"
+          break
+      case "Completed":
+          bgColor = "bg-emerald-900/60"
+          textColor = "text-emerald-200"
+          break
+      case "Rejected":
+          bgColor = "bg-red-900/60"
+          textColor = "text-red-200"
+          break
+  }
+
+  return (<span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${bgColor} ${textColor}`}>
+      {status}
+  </span>)
 }

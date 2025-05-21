@@ -1,8 +1,23 @@
+import supabaseClient from "../../middleware/supabase.middleware.js";
 // Department Controller
 export const getAllDepartments = async (req, res) => {
   try {
-    // Logic to get all departments
-    res.json({ departments: [] });
+    const { data, error } = await supabaseClient
+      .from('departments')
+      .select('*, staffCount:staffs(count), petitionCount:petitions(count), admin:users!departments_admin_id_fkey(id, name, email)');
+    
+    if (error) throw error;
+
+    // Transform the data to convert count objects to integers
+    const transformedData = data.map(dept => ({
+      ...dept,
+      staffCount: dept.staffCount[0]?.count || 0,
+      petitionCount: dept.petitionCount[0]?.count || 0,
+      adminName: dept.admin.name,
+      adminEmail: dept.admin.email,
+    }));
+
+    res.json(transformedData);
   } catch (error) {
     res.status(500).json({ error: error.message });
   }

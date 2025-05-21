@@ -1,12 +1,57 @@
-import supabaseClient from '../middleware/supabase.middleware.js'
+import supabaseClient from '../middleware/supabase.middleware.js';
 
 // User Controller
 export const getUsers = async (req, res) => {
   try {
-    // Logic to get all users
-    const { data, error } = await supabaseClient.client.from('users').select('*');
-    if (error) throw error;
-    res.json({ users: data });
+    // Enhanced query to get users with department information
+    const { data: users, error: userError } = await supabaseClient.from('users').select('*');
+    if (userError) throw userError;
+    
+    // Get department information for each user based on their role
+    const usersWithDepts = await Promise.all(users.map(async (user) => {
+      let departmentName = null;
+      
+      // For department admins
+      if (user.role === 2) { // Assuming role 2 is department admin
+        const { data: deptData, error: deptError } = await supabaseClient
+          .from('departments')
+          .select('name')
+          .eq('admin_id', user.id)
+          .single();
+          
+        if (!deptError && deptData) {
+          departmentName = deptData.name;
+        }
+      }
+      
+      // For staff members
+      if (user.role === 1) { // Assuming role 1 is staff
+        const { data: staffData, error: staffError } = await supabaseClient
+          .from('staffs')
+          .select('department_id')
+          .eq('staff_id', user.id)
+          .single();
+          
+        if (!staffError && staffData) {
+          const { data: deptData, error: deptError } = await supabaseClient
+            .from('departments')
+            .select('name')
+            .eq('id', staffData.department_id)
+            .single();
+            
+          if (!deptError && deptData) {
+            departmentName = deptData.name;
+          }
+        }
+      }
+      
+      return {
+        ...user,
+        department_name: departmentName
+      };
+    }));
+    
+    res.json(usersWithDepts);
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
@@ -82,6 +127,17 @@ export const getDepartmentIdFromAdminId = async (adminId) => {
     const { data, error } = await supabaseClient.from('departments').select('id').eq('admin_id', adminId).single();
     if (error) throw error;
     return data.id;
+  } catch (error) {
+    console.log(error);
+    throw new Error(error.message);
+  }
+}
+
+export const getDepartmentIdFromStaffId = async (staffId) => {
+  try {
+    const { data, error } = await supabaseClient.from('staffs').select('department_id').eq('staff_id', staffId).single();
+    if (error) throw error;
+    return data.department_id;
   } catch (error) {
     console.log(error);
     throw new Error(error.message);

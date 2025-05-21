@@ -15,56 +15,46 @@ import { SuperAdminPetitionContent } from "../sections/super-admin/petitions-con
 import { DepartmentsContent } from "../sections/super-admin/departments-content"
 import { UsersContent } from "../sections/super-admin/users-content"
 import { SettingsContent } from "../sections/settings/settings-content"
+import { useRouter } from "next/navigation"
+import { useToast } from "@/hooks/use-toast"
+import callAPI from "@/app/utils/apiCaller"
+import { getUserRoleForSuperAdmin } from "@/app/utils/userUtils"
+import { SuperAdminDashboardContent } from "../sections/super-admin/super-admin-dashboard-content"
 
+// Define interfaces for data types
+interface Petition {
+  id: number
+  title: string
+  status: string
+  department: string
+  created_at: string
+  description: string
+  severity: string
+  submitted_by: string
+  assigned_to: string
+}
 
-// Mock data for all petitions
-const mockPetitions = [
-  {
-    id: 201,
-    title: "Road Repair on Main Street",
-    department: "Infrastructure",
-    submittedBy: "John Doe",
-    status: "In Progress",
-    priority: "High",
-    createdAt: "2023-04-15",
-  },
-  {
-    id: 202,
-    title: "New Textbooks for Elementary School",
-    department: "Education",
-    submittedBy: "Jane Smith",
-    status: "New",
-    priority: "Medium",
-    createdAt: "2023-04-12",
-  },
-  {
-    id: 203,
-    title: "Hospital Equipment Upgrade",
-    department: "Healthcare",
-    submittedBy: "Robert Johnson",
-    status: "Under Review",
-    priority: "High",
-    createdAt: "2023-04-10",
-  },
-  {
-    id: 204,
-    title: "Public Park Renovation",
-    department: "Environment",
-    submittedBy: "Sarah Williams",
-    status: "Completed",
-    priority: "Medium",
-    createdAt: "2023-04-05",
-  },
-  {
-    id: 205,
-    title: "Additional Street Lights in Downtown",
-    department: "Public Safety",
-    submittedBy: "Michael Brown",
-    status: "In Progress",
-    priority: "Low",
-    createdAt: "2023-04-02",
-  }
-]
+interface Staff {
+  id: number
+  name: string
+  email: string
+  department: string
+  assignedCount: number
+  inProgressCount: number
+  completedCount: number
+}
+
+// Use the same Department interface expected by DepartmentsContent component
+interface Department {
+  id: number
+  name: string
+  description: string
+  adminName: string
+  adminEmail: string
+  staffCount: number
+  activePetitions: number
+  status: string
+}
 
 // Navigation items data for cleaner code
 const navItems = [
@@ -78,9 +68,210 @@ const navItems = [
 export function SuperAdminLayout({ children }: { children: React.ReactNode }) {
   const [isSidebarOpen, setSidebarOpen] = useState(false);
   const [activeTab, setActiveTab] = useState("dashboard");
-  const [petitions, setPetitions] = useState(mockPetitions);
+  const [petitions, setPetitions] = useState<Petition[]>([]);
+  const [departments, setDepartments] = useState<Department[]>([]);
+  const [staffs, setStaffs] = useState<Staff[]>([]);
+  const [users, setUsers] = useState<Staff[]>([]); // Using Staff interface for users as well
+  const [name, setName] = useState("Super Admin");
+  const [email, setEmail] = useState("admin@petitionsystem.gov");
+  const [avatar, setAvatar] = useState("SA");
   
   const pathname = usePathname();
+  const router = useRouter();
+  const { toast } = useToast();
+
+  // Authentication and user data loading
+  useEffect(() => {
+    async function checkAuthStatus() {
+      try {
+        const response = await callAPI('/api/auth/me', 'GET');
+        if (response && response.user && response.user.role !== 3) {
+          toast({
+            title: "Unauthorized",
+            description: "You do not have permission to access this page",
+            variant: "destructive",
+          });
+          router.push('/auth/login');
+        }
+        if (response && response.user) {
+          setName(response.user.name);
+          setEmail(response.user.email);
+          setAvatar(response.user.name[0].toUpperCase());
+        } else {
+          toast({
+            title: "Authentication error",
+            description: "Please login to continue",
+            variant: "destructive",
+          });
+          router.push('/auth/login');
+        }
+      } catch (error) {
+        console.log("Authentication error:", error);
+        toast({
+          title: "Authentication error",
+          description: "Please login to continue",
+          variant: "destructive",
+        });
+        router.push('/auth/login');
+      }
+    }
+
+    checkAuthStatus();
+  }, [router, toast]);
+
+  // Load petitions data
+  useEffect(() => {
+    const fetchPetitions = async () => {
+      try {
+        let originalPetitions = await callAPI('/api/petitions', 'GET');
+        console.log("Fetched petitions:", originalPetitions);
+        if (originalPetitions && originalPetitions.success) {
+          // Transform data to match the expected format
+          const transformedPetitions = originalPetitions.data.map((petition: any) => ({
+            id: petition.id,
+            title: petition.title,
+            status: petition.status || "New",
+            department: petition.department || "Unassigned",
+            created_at: petition.created_at || new Date().toISOString(),
+            description: petition.description || "",
+            severity: petition.severity || petition.priority || "Medium",
+            submitted_by: petition.submitted_by || "Anonymous",
+            assigned_to: petition.assigned_to || "",
+            due_date: petition.due_date,
+          }));
+          setPetitions(transformedPetitions);
+        } else {
+          setPetitions([]);
+        }
+      } catch (error) {
+        console.error("Error fetching petitions:", error);
+        setPetitions([]);
+      }
+    };
+
+    // Only fetch petitions if user is authenticated (email exists)
+    if (email && email !== "admin@petitionsystem.gov") {
+      fetchPetitions();
+    }
+  }, [email]);
+
+  // Load departments data
+  useEffect(() => {
+    const fetchDepartments = async () => {
+      try {
+        let originalDepartments = await callAPI('/api/departments', 'GET');
+        console.log("Fetched departments:", originalDepartments);
+        if (originalDepartments && originalDepartments.success) {
+          // Transform data to match the expected Department interface
+          const transformedDepartments = originalDepartments.data.map((dept: any) => ({
+            id: dept.id,
+            name: dept.name,
+            description: dept.description || "Department description",
+            adminName: dept.adminName || dept.admin_name || "Not assigned",
+            adminEmail: dept.adminEmail || dept.admin_email || "Not assigned",
+            staffCount: dept.staffCount || dept.staff_count || 0,
+            activePetitions: dept.petitionCount || dept.petition_count || 0,
+            status: dept.status || "Active"
+          }));
+          setDepartments(transformedDepartments);
+        } else {
+          setDepartments([]);
+        }
+      } catch (error) {
+        console.error("Error fetching departments:", error);
+        setDepartments([]);
+      }
+    };
+
+    // Only fetch departments if user is authenticated (email exists)
+    if (email && email !== "admin@petitionsystem.gov") {
+      fetchDepartments();
+    }
+  }, [email]);
+
+  // Load users data
+  useEffect(() => {
+    const fetchUsers = async () => {
+      try {
+        let originalUsers = await callAPI('/api/users', 'GET');
+        console.log("Fetched users:", originalUsers);
+        if (originalUsers && originalUsers.success) {
+          // Transform data to match the expected format
+          const transformedUsers = originalUsers.data.map((user: any) => ({
+            id: user.id,
+            name: user.name,
+            email: user.email,
+            role: getUserRoleForSuperAdmin(user.role),
+            department: user.department_name || null,
+            status: user.status || "Active",
+            joined: user.created_at ? new Date(user.created_at).toISOString().split('T')[0] : new Date().toISOString().split('T')[0],
+            petitionsCreated: user.petitions_count || 0,
+            verified: user.verified || true
+          }));
+          setUsers(transformedUsers);
+        } else {
+          setUsers([]);
+        }
+      } catch (error) {
+        console.error("Error fetching users:", error);
+        setUsers([]);
+      }
+    };
+
+    // Only fetch users if user is authenticated (email exists)
+    if (email && email !== "admin@petitionsystem.gov") {
+      fetchUsers();
+    }
+  }, [email]);
+
+  // Load staffs data
+  useEffect(() => {
+    const fetchStaffs = async () => {
+      try {
+        let originalStaffs = await callAPI('/api/staff', 'GET');
+        console.log("Fetched staffs:", originalStaffs);
+        if (originalStaffs && originalStaffs.success) {
+          setStaffs(originalStaffs.data);
+        } else {
+          setStaffs([]);
+        }
+      } catch (error) {
+        console.error("Error fetching staffs:", error);
+        setStaffs([]);
+      }
+    };
+
+    // Only fetch staffs if user is authenticated (email exists)
+    if (email && email !== "admin@petitionsystem.gov") {
+      fetchStaffs();
+    }
+  }, [email]);
+
+  async function handleLogout() {
+    try {
+      const response = await callAPI('/api/auth/logout', 'POST');
+      if (response.success) {
+        toast({
+          title: "Logged out successfully",
+          description: "You have been logged out of your account",
+        });
+        router.push('/auth/login');
+      } else {
+        toast({
+          title: "Error logging out",
+          description: response.message || "There was an error logging out",
+          variant: "destructive",
+        });
+      }
+    } catch (error) {
+      console.error("Logout error:", error);
+      toast({
+        title: "Error logging out",
+        description: "There was an error logging out",
+        variant: "destructive",
+      });
+    }
+  }
 
   // Close sidebar when pressing escape key
   useEffect(() => {
@@ -123,7 +314,7 @@ export function SuperAdminLayout({ children }: { children: React.ReactNode }) {
   const renderActiveContent = () => {
     switch (activeTab) {
       case "dashboard":
-        return children;
+        return <SuperAdminDashboardContent petitions={petitions}/>;
       case "petitions":
         return (
           
@@ -135,17 +326,15 @@ export function SuperAdminLayout({ children }: { children: React.ReactNode }) {
         );
       case "departments":
         return (
-            <DepartmentsContent />
+            <DepartmentsContent departments={departments} />
         );
       case "users":
         return (
-
-            <UsersContent />
+            <UsersContent users={users} />
         );
       case "settings":
         return (
-         
-            <SettingsContent />
+            <SettingsContent userProfile={{name, email, avatar}} />
         );
       default:
         return children;

@@ -1,7 +1,7 @@
 import { generateToken, setTokenCookie, verifyToken } from '../utils/jwt/jwtUtils.js';
 import srpServer from 'secure-remote-password/server.js';
 import supabaseClient from '../middleware/supabase.middleware.js';
-import { getUserByEmail, createUser, getDepartmentIdFromAdminId } from './user.controller.js';
+import { getUserByEmail, createUser, getDepartmentIdFromAdminId, getDepartmentIdFromStaffId } from './user.controller.js';
 import { getDepartmentNameFromId } from './department/utils/department.read.utils.js';
 
 // Auth Controller
@@ -110,7 +110,14 @@ export const srpVerify = async (req, res) => {
         let departmentId = null;
         if(data.role === 2) {
             departmentId = await getDepartmentIdFromAdminId(data.id);
+        } else if(data.role === 1) {
+            console.log('Staff ID:', data.id);
+            
+            departmentId = await getDepartmentIdFromStaffId(data.id);
+
         }
+        console.log('Department ID:', departmentId);
+        
 
 
         const authToken = generateToken({

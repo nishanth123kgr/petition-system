@@ -45,8 +45,8 @@ interface StaffDashboardContentProps {
     submittedBy: string
     status: string
     priority: string
-    assignedDate: string
-    dueDate: string
+    assigned_date: string
+    due_date: string
     description: string
   }>
   onUpdateStatus: (id: number, newStatus: string) => void
@@ -146,7 +146,7 @@ export function StaffDashboardContent({ petitions, onUpdateStatus }: StaffDashbo
                 </CardHeader>
                 <CardContent className="relative z-10">
                   <div className="text-2xl font-bold text-white">
-                    {petitions.filter(p => new Date(p.dueDate) < new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)).length}
+                    {petitions.filter(p => p.due_date && new Date(p.due_date) < new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)).length}
                   </div>
                   <div className="text-xs text-slate-400 mt-1">Within 7 days</div>
                 </CardContent>
