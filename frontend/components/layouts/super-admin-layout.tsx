@@ -326,7 +326,7 @@ export function SuperAdminLayout({ children }: { children: React.ReactNode }) {
         );
       case "departments":
         return (
-            <DepartmentsContent departments={departments} />
+            <DepartmentsContent />
         );
       case "users":
         return (

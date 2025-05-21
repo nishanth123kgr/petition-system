@@ -91,7 +91,7 @@ export function DepartmentsContent() {
         name: newDepartment.name,
         adminName: newDepartment.adminName,
         adminEmail: newDepartment.adminEmail
-      })
+      } as any)
       
       if (departmentResponse.success) {
         toast({
