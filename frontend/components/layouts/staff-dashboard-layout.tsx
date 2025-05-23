@@ -51,6 +51,7 @@ export function StaffDashboardLayout({ children }: { children: React.ReactNode }
   const [email, setEmail] = useState("Email");
   const [avatar, setAvatar] = useState("A");
   const [department, setDepartment] = useState("Department");
+  const [id, setId] = useState(0);
 
   const router = useRouter();
   const { toast } = useToast();
@@ -72,6 +73,7 @@ export function StaffDashboardLayout({ children }: { children: React.ReactNode }
           setEmail(response.user.email);
           setAvatar(response.user.name[0].toUpperCase());
           setDepartment(response.user.departmentName);
+          setId(response.user.id);
         } else {
           toast({
             title: "Authentication error",
@@ -194,7 +196,7 @@ export function StaffDashboardLayout({ children }: { children: React.ReactNode }
       case "petitions":
         return <StaffPetitionsContent petitions={petitions} onUpdateStatus={handleUpdateStatus} department={department} />;
       case "settings":
-        return <SettingsContent />;
+        return <SettingsContent userProfile={{ name, email, avatar, id }} />;
       default:
         return <StaffDashboardContent petitions={petitions} onUpdateStatus={handleUpdateStatus} />;
     }

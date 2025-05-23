@@ -1,4 +1,6 @@
 import supabaseClient from '../middleware/supabase.middleware.js';
+import srpClient from 'secure-remote-password/client.js';
+import srpServer from 'secure-remote-password/server.js';
 
 // User Controller
 export const getUsers = async (req, res) => {
@@ -104,11 +106,51 @@ export const createUser = async (userData) => {
 
 export const updateUser = async (req, res) => {
   const { userId } = req.params;
+  const { name } = req.body;
+  
   try {
-    // Logic to update user
-    res.json({ message: 'User updated successfully' });
+    // Validate inputs
+    if (!name) {
+      return res.status(400).json({ 
+        success: false, 
+        message: 'Name is required' 
+      });
+    }
+    
+    // Verify the authenticated user is changing their own profile
+    if (req.user.id !== parseInt(userId)) {
+      return res.status(403).json({ 
+        success: false, 
+        message: 'You can only update your own profile' 
+      });
+    }
+    
+    // Update user name
+    const { data, error } = await supabaseClient
+      .from('users')
+      .update({ name })
+      .eq('id', userId)
+      .select();
+    
+    if (error) {
+      console.error('Error updating user:', error);
+      return res.status(500).json({ 
+        success: false, 
+        message: 'Failed to update user profile' 
+      });
+    }
+    
+    return res.status(200).json({ 
+      success: true, 
+      message: 'Profile updated successfully',
+      user: data[0]
+    });
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    console.error('Profile update error:', error);
+    res.status(500).json({ 
+      success: false, 
+      error: error.message 
+    });
   }
 };
 
@@ -143,3 +185,87 @@ export const getDepartmentIdFromStaffId = async (staffId) => {
     throw new Error(error.message);
   }
 }
+
+export const changePassword = async (req, res) => {
+  try {
+    const { email, currentPassword, newVerifier } = req.body;
+    
+    if (!email || !currentPassword || !newVerifier) {
+      return res.status(400).json({ 
+        success: false, 
+        message: 'Missing required fields' 
+      });
+    }
+    
+    // Verify the authenticated user is changing their own password
+    if (req.user.email !== email) {
+      return res.status(403).json({ 
+        success: false, 
+        message: 'You can only change your own password' 
+      });
+    }
+    
+    // Get user data from database
+    const userData = await getUserByEmail(email);
+    
+    if (!userData) {
+      return res.status(404).json({ 
+        success: false, 
+        message: 'User not found' 
+      });
+    }
+    
+    // Verify current password using SRP protocol
+    try {
+      const salt = userData.salt;
+      const storedVerifier = userData.verifier;
+      
+      // Derive private key and verify using SRP protocol
+      const testPrivateKey = srpClient.derivePrivateKey(salt, email, currentPassword);
+      const testVerifier = srpClient.deriveVerifier(testPrivateKey);
+      
+      // Compare verifiers - this is a simplified verification
+      // In production, you would use a full SRP verification handshake
+      if (testVerifier !== storedVerifier) {
+        return res.status(401).json({ 
+          success: false, 
+          message: 'Current password is incorrect' 
+        });
+      }
+      
+      // If verification is successful, update to new password
+      const { data, error } = await supabaseClient
+        .from('users')
+        .update({ verifier: newVerifier })
+        .eq('email', email);
+      
+      if (error) {
+        console.error('Error updating password:', error);
+        return res.status(500).json({ 
+          success: false, 
+          message: 'Failed to update password' 
+        });
+      }
+      
+      return res.status(200).json({ 
+        success: true, 
+        message: 'Password changed successfully' 
+      });
+    } catch (error) {
+      console.error('Password verification error:', error);
+      return res.status(500).json({ 
+        success: false, 
+        message: 'Failed to verify current password',
+        error: error.message 
+      });
+    }
+    
+  } catch (error) {
+    console.error('Password change error:', error);
+    return res.status(500).json({ 
+      success: false, 
+      message: 'An error occurred while changing the password',
+      error: error.message 
+    });
+  }
+};

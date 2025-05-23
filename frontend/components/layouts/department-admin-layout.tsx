@@ -41,6 +41,7 @@ export function DepartmentAdminLayout() {
   const [email, setEmail] = useState("");
   const [avatar, setAvatar] = useState("");
   const [department, setDepartment] = useState("");
+  const [id, setId] = useState(0);
 
   const router = useRouter();
   const { toast } = useToast();
@@ -62,6 +63,7 @@ export function DepartmentAdminLayout() {
           setEmail(response.user.email);
           setAvatar(response.user.name[0].toUpperCase());
           setDepartment(response.user.departmentName);
+          setId(response.user.id);
         } else {
           toast({
             title: "Authentication error",
@@ -204,7 +206,7 @@ export function DepartmentAdminLayout() {
       case "petitions":
         return <PetitionsContent petitions={petitions} staffs={staffs} />;
       case "settings":
-        return <SettingsContent />;
+        return <SettingsContent userProfile={{ name, email, avatar, id }} />;
       default:
         return <DashboardContent petitions={petitions} />;
     }

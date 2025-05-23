@@ -19,6 +19,7 @@ import { SettingsContent } from "../sections/settings/settings-content"
 import callAPI from "@/app/utils/apiCaller"
 import { getUserRoleWithID } from "@/app/utils/userUtils"
 import { useToast } from "@/hooks/use-toast"
+import { set } from "date-fns"
 
 // Navigation items data for cleaner code
 const navItems = [
@@ -35,6 +36,7 @@ export function UserDashboardLayout({ children }: { children: React.ReactNode })
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [avatar, setAvatar] = useState("");
+  const [id, setId] = useState(0);
 
   const router = useRouter();
   const { toast } = useToast();
@@ -55,6 +57,7 @@ export function UserDashboardLayout({ children }: { children: React.ReactNode })
           setName(response.user.name);
           setEmail(response.user.email);
           setAvatar(response.user.name[0].toUpperCase());
+          setId(response.user.id);
         } else {
           toast({
             title: "Authentication error",
@@ -167,7 +170,7 @@ export function UserDashboardLayout({ children }: { children: React.ReactNode })
       case "my-petitions":
         return <UserMyPetitionsContent petitions={petitions} />;
       case "settings":
-        return <SettingsContent />;
+        return <SettingsContent userProfile={{ name, avatar, email, id }} />;
       default:
         return <UserDashboardContent petitions={petitions} />;
     }

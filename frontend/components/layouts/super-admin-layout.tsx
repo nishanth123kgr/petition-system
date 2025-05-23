@@ -75,7 +75,8 @@ export function SuperAdminLayout({ children }: { children: React.ReactNode }) {
   const [name, setName] = useState("Super Admin");
   const [email, setEmail] = useState("admin@petitionsystem.gov");
   const [avatar, setAvatar] = useState("SA");
-  
+  const [id, setId] = useState(0);
+
   const pathname = usePathname();
   const router = useRouter();
   const { toast } = useToast();
@@ -97,6 +98,7 @@ export function SuperAdminLayout({ children }: { children: React.ReactNode }) {
           setName(response.user.name);
           setEmail(response.user.email);
           setAvatar(response.user.name[0].toUpperCase());
+          setId(response.user.id);
         } else {
           toast({
             title: "Authentication error",
@@ -247,31 +249,34 @@ export function SuperAdminLayout({ children }: { children: React.ReactNode }) {
     }
   }, [email]);
 
+
   async function handleLogout() {
     try {
-      const response = await callAPI('/api/auth/logout', 'POST');
-      if (response.success) {
+      const response = await callAPI('/api/auth/logout');
+      if (response && response.success) {
         toast({
-          title: "Logged out successfully",
-          description: "You have been logged out of your account",
+          title: "Logged out",
+          description: "You have been logged out successfully",
+          variant: "default",
         });
         router.push('/auth/login');
       } else {
         toast({
-          title: "Error logging out",
-          description: response.message || "There was an error logging out",
+          title: "Logout error",
+          description: "An error occurred while logging out",
           variant: "destructive",
         });
       }
     } catch (error) {
       console.error("Logout error:", error);
       toast({
-        title: "Error logging out",
-        description: "There was an error logging out",
+        title: "Logout error",
+        description: "An error occurred while logging out",
         variant: "destructive",
       });
     }
   }
+
 
   // Close sidebar when pressing escape key
   useEffect(() => {
@@ -290,7 +295,7 @@ export function SuperAdminLayout({ children }: { children: React.ReactNode }) {
 
     window.addEventListener('keydown', handleEscKey);
     window.addEventListener('resize', handleResize);
-    
+
     return () => {
       window.removeEventListener('keydown', handleEscKey);
       window.removeEventListener('resize', handleResize);
@@ -304,7 +309,7 @@ export function SuperAdminLayout({ children }: { children: React.ReactNode }) {
     } else {
       document.body.style.overflow = '';
     }
-    
+
     return () => {
       document.body.style.overflow = '';
     };
@@ -314,27 +319,27 @@ export function SuperAdminLayout({ children }: { children: React.ReactNode }) {
   const renderActiveContent = () => {
     switch (activeTab) {
       case "dashboard":
-        return <SuperAdminDashboardContent petitions={petitions}/>;
+        return <SuperAdminDashboardContent petitions={petitions} />;
       case "petitions":
         return (
-          
+
           <div className="p-6">
             <h2 className="text-2xl font-bold mb-4 bg-gradient-to-r from-purple-200 to-fuchsia-200 bg-clip-text text-transparent">All Petitions</h2>
             <p className="text-slate-400 mb-6">View and manage all petitions across the system</p>
-            {<SuperAdminPetitionContent petitions={petitions}/>}
+            {<SuperAdminPetitionContent petitions={petitions} />}
           </div>
         );
       case "departments":
         return (
-            <DepartmentsContent />
+          <DepartmentsContent />
         );
       case "users":
         return (
-            <UsersContent users={users} />
+          <UsersContent users={users} />
         );
       case "settings":
         return (
-            <SettingsContent userProfile={{name, email, avatar}} />
+          <SettingsContent userProfile={{ name, email, avatar, id }} />
         );
       default:
         return children;
@@ -371,7 +376,7 @@ export function SuperAdminLayout({ children }: { children: React.ReactNode }) {
               </h1>
             </Link>
           </div>
-          
+
           <div className="flex items-center ml-auto gap-1 md:gap-3">
             {/* Add Department Button */}
             <Popover>
@@ -431,27 +436,27 @@ export function SuperAdminLayout({ children }: { children: React.ReactNode }) {
                     </div>
                   </div>
                   <DropdownMenuSeparator className="bg-slate-800" />
-                  <DropdownMenuItem 
-                    onClick={() => setActiveTab("settings")} 
+                  <DropdownMenuItem
+                    onClick={() => setActiveTab("settings")}
                     className="text-slate-200 focus:bg-slate-800 focus:text-white cursor-pointer"
                   >
                     <User className="mr-2 h-4 w-4" />
                     <span>Profile</span>
                   </DropdownMenuItem>
-                  <DropdownMenuItem 
-                    onClick={() => setActiveTab("settings")} 
+                  <DropdownMenuItem
+                    onClick={() => setActiveTab("settings")}
                     className="text-slate-200 focus:bg-slate-800 focus:text-white cursor-pointer"
                   >
                     <Settings className="mr-2 h-4 w-4" />
                     <span>Settings</span>
                   </DropdownMenuItem>
                   <DropdownMenuSeparator className="bg-slate-800" />
-                  <Link href="/auth/login">
+                  <div onClick={handleLogout} className="w-full text-left">
                     <DropdownMenuItem className="text-red-400 focus:bg-red-900/20 focus:text-red-300 cursor-pointer">
                       <LogOut className="mr-2 h-4 w-4" />
                       <span>Log out</span>
                     </DropdownMenuItem>
-                  </Link>
+                  </div>
                 </DropdownMenuContent>
               </DropdownMenu>
             </div>
@@ -519,16 +524,15 @@ export function SuperAdminLayout({ children }: { children: React.ReactNode }) {
 
             {/* Fixed logout section - always at bottom and visible */}
             <div className="p-4 border-t border-slate-800/60 bg-slate-900/80 backdrop-blur-sm">
-              <Link href="/auth/login">
-                <Button
-                  variant="ghost"
-                  className="w-full justify-start group relative overflow-hidden text-red-400 hover:text-red-300 hover:bg-red-900/20 truncate"
-                >
-                  <LogOut className="min-w-[16px] mr-2 h-4 w-4" />
-                  <span className="truncate">Logout</span>
-                  <span className="absolute inset-0 h-full w-full scale-0 rounded-md bg-red-500/10 transition-all duration-300 group-hover:scale-100 group-hover:opacity-100" />
-                </Button>
-              </Link>
+              <Button
+                variant="ghost"
+                className="w-full justify-start group relative overflow-hidden text-red-400 hover:text-red-300 hover:bg-red-900/20 truncate"
+                onClick={handleLogout}
+              >
+                <LogOut className="min-w-[16px] mr-2 h-4 w-4" />
+                <span className="truncate">Logout</span>
+                <span className="absolute inset-0 h-full w-full scale-0 rounded-md bg-red-500/10 transition-all duration-300 group-hover:scale-100 group-hover:opacity-100" />
+              </Button>
             </div>
           </div>
         </aside>
@@ -543,8 +547,8 @@ export function SuperAdminLayout({ children }: { children: React.ReactNode }) {
               transition={{ duration: 0.3 }}
               className="text-sm text-slate-400 flex items-center gap-1.5"
             >
-              <button 
-                onClick={() => setActiveTab("dashboard")} 
+              <button
+                onClick={() => setActiveTab("dashboard")}
                 className="hover:text-purple-300 transition-colors flex items-center"
               >
                 <LayoutDashboard className="h-3.5 w-3.5 mr-1.5" />
@@ -587,24 +591,24 @@ export function SuperAdminLayout({ children }: { children: React.ReactNode }) {
             <div className="relative rounded-xl bg-slate-900/50 backdrop-blur-sm border border-slate-800/60 shadow-lg overflow-hidden">
               {/* Top decorative gradient line */}
               <div className="absolute top-0 inset-x-0 h-px bg-gradient-to-r from-transparent via-purple-500/40 to-transparent"></div>
-              
+
               {/* Content with padding */}
               <div className="w-full">
                 {renderActiveContent()}
               </div>
-              
+
               {/* Bottom decorative gradient line */}
               <div className="absolute bottom-0 inset-x-0 h-px bg-gradient-to-r from-transparent via-fuchsia-500/40 to-transparent"></div>
             </div>
           </motion.div>
-          
+
           {/* Footer */}
           <footer className="mt-8 text-center text-xs text-slate-500 py-4">
             <p>© 2025 Petition System. All rights reserved.</p>
           </footer>
         </main>
-      </div>
-    </div>
+      </div >
+    </div >
   )
 }
 

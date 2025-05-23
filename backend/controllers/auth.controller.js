@@ -161,6 +161,7 @@ export const getCurrentUser = async (req, res) => {
         
         // Set user details in request object, excluding sensitive information
         req.user = {
+            id: userData.id,
             name: userData.name,
             email: userData.email,
             role: userData.role,

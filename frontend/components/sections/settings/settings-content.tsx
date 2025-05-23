@@ -4,26 +4,137 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { Switch } from "@/components/ui/switch"
 import { useState } from "react"
+import { useToast } from "@/hooks/use-toast"
+import callAPI from "@/app/utils/apiCaller"
+import srpClient from 'secure-remote-password/client'
 
 interface SettingsContentProps {
   userProfile?: {
     name: string;
     email: string;
     avatar: string;
+    id: number;
   };
 }
 
 export function SettingsContent({ userProfile }: SettingsContentProps) {
-  const [emailNotifications, setEmailNotifications] = useState(true)
-  const [pushNotifications, setPushNotifications] = useState(true)
-  
-  // Extract first and last name from the full name
-  const nameParts = userProfile?.name ? userProfile.name.split(' ') : ['John', 'Doe'];
-  const firstName = nameParts[0] || 'John';
-  const lastName = nameParts.slice(1).join(' ') || 'Doe';
+  const name = userProfile?.name || 'John Doe';
   const email = userProfile?.email || 'staff@infrastructure.gov';
+  const id = userProfile?.id || 0;
+  
+  // Toast notifications
+  const { toast } = useToast();
+  
+  // Profile form state
+  const [profileName, setProfileName] = useState(name);
+  const [profileEmail, setProfileEmail] = useState(email);
+  const [isProfileUpdating, setIsProfileUpdating] = useState(false);
+  
+  // Password form state
+  const [currentPassword, setCurrentPassword] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [isPasswordUpdating, setIsPasswordUpdating] = useState(false);
+  const [passwordError, setPasswordError] = useState("");
+
+  // Handle profile update
+  const handleProfileUpdate = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsProfileUpdating(true);
+    
+    try {
+      // Call API to update user profile
+      const response = await callAPI(`/api/users/${id}`, 'PUT', {
+        name: profileName
+      } as any);
+      
+      if (!response.success) {
+        throw new Error(response.message || 'Failed to update profile');
+      }
+      
+      toast({
+        title: "Profile updated",
+        description: "Your profile has been updated successfully",
+        variant: "default"
+      });
+    } catch (error) {
+      toast({
+        title: "Update failed",
+        description: error instanceof Error ? error.message : "Failed to update profile",
+        variant: "destructive"
+      });
+    } finally {
+      setIsProfileUpdating(false);
+    }
+  };
+
+  // Handle password change
+  const handlePasswordChange = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setPasswordError("");
+    
+    // Validate passwords
+    if (newPassword.length < 8) {
+      setPasswordError("Password must be at least 8 characters long");
+      return;
+    }
+    
+    if (newPassword !== confirmPassword) {
+      setPasswordError("Passwords do not match");
+      return;
+    }
+    
+    setIsPasswordUpdating(true);
+    
+    try {
+      // Get salt for the user
+      // @ts-ignore - ignore TypeScript error for callAPI
+      const initResponse = await callAPI('/api/auth/srp/init', 'POST', { email: profileEmail });
+      
+      if (!initResponse.success) {
+        throw new Error(initResponse.message || 'Failed to initialize password change');
+      }
+      
+      const { salt } = initResponse.data;
+      
+      // Generate verifier using SRP protocol
+      const oldPrivateKey = srpClient.derivePrivateKey(salt, profileEmail, currentPassword);
+      const newPrivateKey = srpClient.derivePrivateKey(salt, profileEmail, newPassword);
+      const newVerifier = srpClient.deriveVerifier(newPrivateKey);
+      
+      // Call API to change password
+      // @ts-ignore - ignore TypeScript error for callAPI
+      const response = await callAPI('/api/users/change-password', 'POST', {
+        email: profileEmail,
+        currentPassword,
+        newVerifier
+      });
+      
+      if (response.success) {
+        toast({
+          title: "Password changed",
+          description: "Your password has been changed successfully",
+          variant: "default"
+        });
+        
+        // Clear password fields
+        setCurrentPassword("");
+        setNewPassword("");
+        setConfirmPassword("");
+      } else {
+        throw new Error(response.message || 'Failed to change password');
+      }
+    } catch (error) {
+      toast({
+        title: "Password change failed",
+        description: error instanceof Error ? error.message : "Failed to change password",
+        variant: "destructive"
+      });
+    } finally {
+      setIsPasswordUpdating(false);
+    }
+  };
 
   return (
     <div className="p-6">
@@ -42,25 +153,15 @@ export function SettingsContent({ userProfile }: SettingsContentProps) {
             </CardDescription>
           </CardHeader>
           <CardContent className="relative z-10 space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="firstName" className="text-slate-300">First Name</Label>
-                <Input 
-                  id="firstName" 
-                  placeholder="First name" 
-                  defaultValue={firstName}
-                  className="bg-slate-800/70 border-slate-700/50 text-slate-200 focus-visible:ring-violet-500/70 focus-visible:ring-offset-slate-900"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="lastName" className="text-slate-300">Last Name</Label>
-                <Input 
-                  id="lastName" 
-                  placeholder="Last name" 
-                  defaultValue={lastName}
-                  className="bg-slate-800/70 border-slate-700/50 text-slate-200 focus-visible:ring-violet-500/70 focus-visible:ring-offset-slate-900"
-                />
-              </div>
+            <div className="space-y-2">
+              <Label htmlFor="name" className="text-slate-300">Full Name</Label>
+              <Input 
+                id="name" 
+                placeholder="Full name" 
+                value={profileName}
+                onChange={(e) => setProfileName(e.target.value)}
+                className="bg-slate-800/70 border-slate-700/50 text-slate-200 focus-visible:ring-violet-500/70 focus-visible:ring-offset-slate-900"
+              />
             </div>
             <div className="space-y-2">
               <Label htmlFor="email" className="text-slate-300">Email</Label>
@@ -68,56 +169,19 @@ export function SettingsContent({ userProfile }: SettingsContentProps) {
                 id="email" 
                 type="email" 
                 placeholder="Email address" 
-                defaultValue={email}
-                className="bg-slate-800/70 border-slate-700/50 text-slate-200 focus-visible:ring-violet-500/70 focus-visible:ring-offset-slate-900"
+                value={profileEmail}
+                disabled
+                className="bg-slate-800/70 border-slate-700/50 text-slate-200 focus-visible:ring-violet-500/70 focus-visible:ring-offset-slate-900 cursor-not-allowed opacity-70"
               />
             </div>
           </CardContent>
           <CardFooter className="relative z-10">
-            <Button className="relative overflow-hidden group bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-500 hover:to-indigo-500 text-white shadow-lg shadow-violet-900/30 transition-all duration-300">
-              <span className="relative z-10">Save Changes</span>
-              <span className="absolute inset-0 h-full w-full scale-0 rounded-full bg-white/10 transition-all duration-300 group-hover:scale-100 group-hover:opacity-100" />
-            </Button>
-          </CardFooter>
-        </Card>
-
-        <Card className="bg-slate-900/70 backdrop-blur-sm border-slate-800/50 overflow-hidden">
-          <div className="absolute inset-0 bg-gradient-to-br from-violet-600/5 to-indigo-600/5 z-0" />
-          <CardHeader className="relative z-10">
-            <CardTitle className="text-slate-100">Notification Preferences</CardTitle>
-            <CardDescription className="text-slate-400">
-              Configure how you receive notifications
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="relative z-10">
-            <div className="space-y-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-slate-300 font-medium">Email Notifications</p>
-                  <p className="text-slate-400 text-sm">Receive updates via email</p>
-                </div>
-                <Switch 
-                  checked={emailNotifications} 
-                  onCheckedChange={setEmailNotifications}
-                  className="data-[state=checked]:bg-violet-600"
-                />
-              </div>
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-slate-300 font-medium">Push Notifications</p>
-                  <p className="text-slate-400 text-sm">Receive updates via push notifications</p>
-                </div>
-                <Switch 
-                  checked={pushNotifications} 
-                  onCheckedChange={setPushNotifications}
-                  className="data-[state=checked]:bg-violet-600"
-                />
-              </div>
-            </div>
-          </CardContent>
-          <CardFooter className="relative z-10">
-            <Button className="relative overflow-hidden group bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-500 hover:to-indigo-500 text-white shadow-lg shadow-violet-900/30 transition-all duration-300">
-              <span className="relative z-10">Save Preferences</span>
+            <Button 
+              onClick={handleProfileUpdate}
+              disabled={isProfileUpdating}
+              className="relative overflow-hidden group bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-500 hover:to-indigo-500 text-white shadow-lg shadow-violet-900/30 transition-all duration-300"
+            >
+              <span className="relative z-10">{isProfileUpdating ? "Saving..." : "Save Changes"}</span>
               <span className="absolute inset-0 h-full w-full scale-0 rounded-full bg-white/10 transition-all duration-300 group-hover:scale-100 group-hover:opacity-100" />
             </Button>
           </CardFooter>
@@ -138,6 +202,8 @@ export function SettingsContent({ userProfile }: SettingsContentProps) {
                 id="currentPassword" 
                 type="password" 
                 placeholder="Current password"
+                value={currentPassword}
+                onChange={(e) => setCurrentPassword(e.target.value)}
                 className="bg-slate-800/70 border-slate-700/50 text-slate-200 focus-visible:ring-violet-500/70 focus-visible:ring-offset-slate-900"
               />
             </div>
@@ -147,6 +213,8 @@ export function SettingsContent({ userProfile }: SettingsContentProps) {
                 id="newPassword" 
                 type="password" 
                 placeholder="New password"
+                value={newPassword}
+                onChange={(e) => setNewPassword(e.target.value)}
                 className="bg-slate-800/70 border-slate-700/50 text-slate-200 focus-visible:ring-violet-500/70 focus-visible:ring-offset-slate-900"
               />
             </div>
@@ -156,13 +224,24 @@ export function SettingsContent({ userProfile }: SettingsContentProps) {
                 id="confirmPassword" 
                 type="password" 
                 placeholder="Confirm new password"
+                value={confirmPassword}
+                onChange={(e) => setConfirmPassword(e.target.value)}
                 className="bg-slate-800/70 border-slate-700/50 text-slate-200 focus-visible:ring-violet-500/70 focus-visible:ring-offset-slate-900"
               />
             </div>
+            {passwordError && (
+              <div className="text-sm text-red-400 mt-2">
+                {passwordError}
+              </div>
+            )}
           </CardContent>
           <CardFooter className="relative z-10">
-            <Button className="relative overflow-hidden group bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-500 hover:to-indigo-500 text-white shadow-lg shadow-violet-900/30 transition-all duration-300">
-              <span className="relative z-10">Change Password</span>
+            <Button 
+              onClick={handlePasswordChange}
+              disabled={isPasswordUpdating}
+              className="relative overflow-hidden group bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-500 hover:to-indigo-500 text-white shadow-lg shadow-violet-900/30 transition-all duration-300"
+            >
+              <span className="relative z-10">{isPasswordUpdating ? "Changing..." : "Change Password"}</span>
               <span className="absolute inset-0 h-full w-full scale-0 rounded-full bg-white/10 transition-all duration-300 group-hover:scale-100 group-hover:opacity-100" />
             </Button>
           </CardFooter>
