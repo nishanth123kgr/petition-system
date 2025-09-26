@@ -22,8 +22,9 @@ export const verifyToken = (token) => {
 export const setTokenCookie = (res, token) => {
   res.cookie('jwt', token, {
     httpOnly: true,
-    secure: process.env.NODE_ENV === 'production', // Use secure in production
-    // sameSite: 'strict',
-    maxAge: 24 * 60 * 60 * 1000 // 1 day
+    domain: '.bluu.in',
+    secure: process.env.NODE_ENV === 'production',
+    sameSite: 'none',
+    maxAge: 24 * 60 * 60 * 1000
   });
 };
