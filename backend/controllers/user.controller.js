@@ -76,7 +76,11 @@ export const getUserByEmail = async (email) => {
     console.log('Getting user by email:', email);
 
     const { data, error } = await supabaseClient.from('users').select('*').eq('email', email).single();
-    if (error) return null;
+    if (error) {
+      console.log(error);
+      
+      throw new Error(JSON.toString(error));
+    }
     if (!data) {
       console.log('User not found');
       return null;

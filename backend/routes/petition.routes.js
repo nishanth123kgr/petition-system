@@ -4,7 +4,6 @@ import { authenticateJWT, authorizeRole } from '../middleware/auth.middleware.js
 
 const router = Router();
 
-// Petition routes
 router.get('/', authenticateJWT, getPetitions);
 router.get('/:petitionId', authenticateJWT, getPetitionById);
 router.post('/', authenticateJWT, createPetition);

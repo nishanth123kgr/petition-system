@@ -12,13 +12,11 @@ import { authenticateJWT, authorizeRole } from '../middleware/auth.middleware.js
 
 const router = Router();
 
-// Staff routes
 router.get('/', authenticateJWT, authorizeRole([2, 3]), getAllStaff);
 router.get('/:staffId', authenticateJWT, getStaffById);
 router.post('/', authenticateJWT, authorizeRole([2, 3]), createStaff);
 router.put('/:staffId', authenticateJWT, authorizeRole([2, 3]), updateStaff);
 
-// Staff petition management routes
 router.get('/:staffId/petitions', authenticateJWT, getAssignedPetitions);
 router.post('/:staffId/petitions/assign', authenticateJWT, authorizeRole([2]), assignPetition);
 router.put('/petitions/:petitionId/process', authenticateJWT, authorizeRole([2]), processPetition);

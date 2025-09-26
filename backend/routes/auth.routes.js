@@ -4,7 +4,6 @@ import { authenticateJWT } from '../middleware/auth.middleware.js';
 
 const router = Router();
 
-// Auth routes
 router.post('/register', register);
 router.post('/srp/init', srpInit);
 router.post('/srp/verify', srpVerify);
