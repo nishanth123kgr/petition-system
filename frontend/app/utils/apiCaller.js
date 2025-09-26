@@ -3,8 +3,10 @@ import { showErrorToast } from "./toastUtils";
 // Updated to allow using either an environment variable, localhost,
 // or dynamically determine the server address based on the current hostname
 const getServerEndpoint = () => {
-    if (process.env.SERVER_ENDPOINT) return process.env.SERVER_ENDPOINT;
-    
+    console.log("Environment Variable SERVER_ENDPOINT:", process.env.NEXT_PUBLIC_SERVER_ENDPOINT);
+
+    if (process.env.NEXT_PUBLIC_SERVER_ENDPOINT) return process.env.NEXT_PUBLIC_SERVER_ENDPOINT;
+
     // If we're in a browser environment
     if (typeof window !== 'undefined') {
         // Get the current hostname (IP or domain name)
@@ -21,6 +23,9 @@ const getServerEndpoint = () => {
 };
 
 const serverEndPoint = getServerEndpoint();
+
+console.log("Using server endpoint:", serverEndPoint);
+
 
 const defaultHeaders = {
     'Content-Type': 'application/json',
